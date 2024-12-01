@@ -53,6 +53,112 @@ def db_check() -> Response:
     except Exception as e:
         return make_response(jsonify({'error': str(e)}), 404)
 
+##########################################################
+#
+# Password Management
+#
+##########################################################
+
+@app.route('/api/login', methods=['POST'])
+def login() -> Response:
+    """
+    Route to check if provided password exists in database
+    
+    Expected JSON Input:
+        - user_name (str): The user name for account 
+        - user_password (str): The password for account
+        
+    Returns:
+        JSON response indicating the success of the login
+    Raises:
+        400 error if input validation fails
+        500 error if there is an issue during login
+    """
+    app.logger.info('Login attempt start')
+    try:
+        data = request.get_json()
+        
+        user_name = data.get('user_name')
+        user_password = data.get('user_password')
+        if not user_name or not user_password:
+            return make_response(jsonify({'error': 'Invalid input, all fields are required with valid values'}), 400)
+        
+        app.logger.info('Validating given password for: %s', user_name)
+        # Insert function to check the given password with the password in db
+        app.logger.info('Password check completed for: %s', user_name)
+        return make_response(jsonify({'status': 'success', 'user_name': user_name}), 201)
+    except Exception as e:
+        app.logger.error('Failed to check password')
+        return make_response(jsonify({'error': str(e)}), 500)
+        
+@app.route('/api/create-account', methods=['POST'])
+def create_account() -> Response:
+    """
+    Route to create a new user account
+    
+    Expected JSON Input:
+        - user_name (str): The user name for account
+        - user_password (str): The password for account
+        
+    Returns:
+        JSON response indicating the success of creating the account
+    Raises:
+        400 error if input validation fails
+        500 error if there is an issue creating user account
+    """
+    app.logger.info('Creating account')
+    try:
+        data = request.get_json()
+        
+        user_name = data.get('user_name')
+        user_password = data.get('user_password')
+        
+        if not user_name or not user_password:
+            return make_response(jsonify({'error': 'Invalid input, all fields are required with valid values'}), 400)
+        
+        app.logger.info('Creating account')
+        # Some function to create account 
+        app.logger.info('Account created')
+        return make_response(jsonify({'status': 'success', 'user_name': user_name}), 201)
+    except Exception as e:
+        app.logger.error('Failed to create account')
+        return make_response(jsonify({'error': str(e)}), 500)
+    
+                           
+    
+@app.route('/api/update-password', methods=['PATCH'])
+def update_password() -> Response:
+    """
+    Route to update password for user account
+    
+    Expected JSON Input:
+        - user_name (str): The user name for account
+        - user_password (str): The password the user wants to update to
+        
+    Returns:
+        JSON reponse indicating the success of creating the accoutn
+    Raises:
+        400 error if input validation fails
+        500 error if there is an issue updating user password
+    """
+    app.logger.info('Updating user password')
+    
+    try:
+        data = request.get_json()
+        
+        user_name = data.get('user_name')
+        user_password = data.get('user_password')
+        
+        if not user_name or not user_password:
+            return make_response(jsonify({'error': 'Invalid input, all fields are required with valid values'}), 400)
+
+        app.logger.info('Updating password')
+        # Some function to update password
+        app.logger.info('Password updated')
+        return make_response(jsonify({'status': 'success', 'user_name': user_name}), 201)
+    except Exception as e:
+        app.logger.error('Failed to update password')
+        return make_response(jsonify({'error': str(e)}), 500)
 
 ##########################################################
 #
