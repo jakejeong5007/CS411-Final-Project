@@ -11,7 +11,53 @@ from music_collection.utils.sql_utils import get_db_connection
 logger = logging.getLogger(__name__)
 configure_logger(logger)
 
-
+def login(user_name: str, user_password: str) -> None:
+    """
+    Login with given user name and password
+    
+    Args:
+        user_name (str): The user name
+        password (str): The password
+    
+    Returns:
+        success (bool): True if the password matches the given user name. Else, False.
+    
+    Raises:
+        ValueError: If user_name or password are invalid
+        sqlite3.Error: For any other datbase errors
+    """
+def create_account(user_name: str, user_password: str) -> None:
+    """
+    Creates a new account in users table.
+    
+    Args:
+        user_name (str): The user name
+        password (str): The password
+        
+    Raises:
+        ValueError: If user_name or password are invalid
+        sqlite3.IntegrityError: If user name already exists in the database
+        sqlite3.Error: For any other database errors.
+    """
+    # Validate the required fields
+    
+    
+def change_password(user_name: str, user_password: str) -> None:
+    """
+    Change password for the given user name account.
+    
+    Args:
+        user_name (str): The user name
+        password (str): The password
+        
+    Returns:
+        success (bool): True if the password change was successful. Else, False.
+        
+    Raises:
+        ValueError: If user_name or  password are invalid
+        sqlite3.Error: For any other datbase errors.
+    """
+    
 @dataclass
 class Song:
     id: int
