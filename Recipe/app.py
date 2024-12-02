@@ -35,7 +35,7 @@ def healthcheck() -> Response:
 @app.route('/api/db-check', methods=['GET'])
 def db_check() -> Response:
     """
-    Route to check if the database connection and songs table are functional.
+    Route to check if the database connection and users table are functional.
 
     Returns:
         JSON response indicating the database health status.
@@ -46,9 +46,9 @@ def db_check() -> Response:
         app.logger.info("Checking database connection...")
         check_database_connection()
         app.logger.info("Database connection is OK.")
-        app.logger.info("Checking if songs table exists...")
-        check_table_exists("songs")
-        app.logger.info("songs table exists.")
+        app.logger.info("Checking if user table exists...")
+        check_table_exists("users")
+        app.logger.info("users table exists.")
         return make_response(jsonify({'database_status': 'healthy'}), 200)
     except Exception as e:
         return make_response(jsonify({'error': str(e)}), 404)
@@ -161,7 +161,37 @@ def update_password() -> Response:
         return make_response(jsonify({'error': str(e)}), 500)
 
 
+##########################################################
+#
+# Recipe Management
+#
+##########################################################
 
+@app.route('/api/search', methods=['GET'])
+def search() -> Response:
+    """
+    Route to search for a recipe with given describtion
+    
+    Expected JSON Input:
+        - some field
+        
+    Returns:
+        JSON response indicating the success of retrieving the recipe
+    Raises:
+        400 error if input validation fails
+        500 error if there is an issue retrieving the recipe
+    """
+    app.logger.info('Retrieving the recipe')
+    try:
+        data = request.get_json()
+        
+        # Need to add after details in input for the method
+    
+        
+    except Exception as e:
+        app.logger.error("Failed to retrieve recipe")
+        return make_response(jsonify({'error': str(e)}), 500)
+    
 
 # -------------------------------------------------------------------------------------
 # Below code is for reference from song management. 
