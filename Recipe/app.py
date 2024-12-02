@@ -160,6 +160,13 @@ def update_password() -> Response:
         app.logger.error('Failed to update password')
         return make_response(jsonify({'error': str(e)}), 500)
 
+
+
+
+# -------------------------------------------------------------------------------------
+# Below code is for reference from song management. 
+# Code for our project should be above this comment.
+
 ##########################################################
 #
 # Song Management
