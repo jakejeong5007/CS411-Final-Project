@@ -46,3 +46,19 @@ def get_random(num_songs: int) -> int:
     except requests.exceptions.RequestException as e:
         logger.error("Request to random.org failed: %s", e)
         raise RuntimeError("Request to random.org failed: %s" % e)
+
+def get_recipes(query, app_id, app_key, calories=None):
+    url = 'https://api.edamam.com/api/recipes/v2'
+    params = {
+        'type': 'public',
+        'q': query,
+        'app_id': app_id,
+        'app_key': app_key,
+    }
+    if calories:
+        params['calories'] = calories
+    response = requests.get(url, params=params)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        response.raise_for_status()
