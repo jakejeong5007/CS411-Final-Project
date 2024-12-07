@@ -13,7 +13,7 @@ configure_logger(logger)
 
 
 @dataclass
-class Song:
+class Recipe:
     id: int
     artist: str
     title: str

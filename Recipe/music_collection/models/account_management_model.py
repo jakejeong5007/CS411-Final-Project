@@ -1,11 +1,9 @@
-from dataclasses import dataclass
 import logging
 import os
 import sqlite3
 import hashlib
 
 from music_collection.utils.logger import configure_logger
-from music_collection.utils.random_utils import get_random
 from music_collection.utils.sql_utils import get_db_connection
 
 
@@ -131,10 +129,6 @@ def hash_password(user_password: str) -> str:
         
     Returns:
         hashed_password (str): The hashed version of password
-    
-    Raises:
-        ValueError: If password is invalid
-        sqlite3.Error: For any other database errors
     """
     
     # Hash the password combined with the salt
