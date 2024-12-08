@@ -14,12 +14,11 @@ configure_logger(logger)
 
 @dataclass
 class Recipe:
-    id: int
-    artist: str
-    title: str
-    year: int
-    genre: str
-    duration: int  # in seconds
+    name: str
+    recipeId: int
+    cuisine: str
+    calories: int
+    
 
     def __post_init__(self):
         if self.duration <= 0:
