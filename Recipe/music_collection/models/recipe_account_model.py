@@ -6,9 +6,9 @@ preferences -> sets selected recipes to prefered recipe for specific user
 get_preferences -> gets current preference
 """
 
-def saveRecipe(user_id, recipe_id):
+def saveRecipe(user_name, recipe_id):
   data = {
-    "userId": user_id,
+    "userName": user_name,
     "recipeId": recipe_id
   }
   response = requests.post("/save", json = data)
