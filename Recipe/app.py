@@ -191,7 +191,107 @@ def search() -> Response:
     except Exception as e:
         app.logger.error("Failed to retrieve recipe")
         return make_response(jsonify({'error': str(e)}), 500)
-    
+@app.route('/api/recommend', methods=['GET'])
+def recommend() -> Response:
+    """
+    Recommend personalized recipes based on user preferences.
+
+    Query Parameters:
+        - userId (str): User ID (required).
+        - cuisine (str, optional): Preferred cuisine type.
+
+    Returns:
+        JSON response with recommended recipes or an error message.
+    """
+    try:
+        user_id = request.args.get('userId')
+        cuisine = request.args.get('cuisine')
+
+        if not user_id:
+            return make_response(jsonify({'error': 'User ID is required'}), 400)
+
+        app.logger.info("Fetching preferences for user ID: %s", user_id)
+
+        # Fetch user preferences from the database
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT preferences FROM users WHERE id = ?", (user_id,))
+            preferences_row = cursor.fetchone()
+
+        if not preferences_row:
+            return make_response(jsonify({'error': 'User preferences not found'}), 404)
+
+        preferences = preferences_row[0]  # Assumes JSON string or dictionary
+        preferred_ingredients = preferences.get("preferred_ingredients", "")
+        calorie_range = preferences.get("calories", None)
+
+        # Fetch recipes using preferred ingredients
+        app_id = "your_edamam_app_id"
+        app_key = "your_edamam_app_key"
+        recipes = get_recipes(query=preferred_ingredients, app_id=app_id, app_key=app_key, calories=calorie_range)
+
+        # Filter by cuisine type if provided
+        if cuisine:
+            recipes = [r for r in recipes.get("hits", []) if cuisine.lower() in r["recipe"].get("cuisineType", [])]
+
+        return make_response(jsonify({'status': 'success', 'recipes': recipes}), 200)
+
+    except Exception as e:
+        app.logger.error("Error recommending recipes: %s", e)
+        return make_response(jsonify({'error': str(e)}), 500)
+
+@app.route('/api/trending', methods=['GET'])
+def trending() -> Response:
+    """
+    Fetch trending recipes sorted by popularity.
+
+    Returns:
+        JSON response with trending recipes or an error message.
+    """
+    try:
+        app.logger.info("Fetching trending recipes from the database")
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT id, title, genre, duration, play_count
+                FROM recipes
+                WHERE deleted = FALSE
+                ORDER BY play_count DESC
+                LIMIT 10
+            """)
+            trending_recipes = cursor.fetchall()
+
+        if not trending_recipes:
+            app.logger.info("No trending recipes in database, fetching from Edamam API")
+            # Fetch from Edamam API if no trending recipes are cached
+            app_id = "your_edamam_app_id"
+            app_key = "your_edamam_app_key"
+            recipes = get_recipes(query="popular", app_id=app_id, app_key=app_key)
+
+            # Save to database for future use
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                for recipe in recipes.get("hits", []):
+                    cursor.execute("""
+                        INSERT INTO recipes (title, genre, duration, play_count, deleted)
+                        VALUES (?, ?, ?, ?, ?)
+                    """, (
+                        recipe["recipe"]["label"],
+                        ",".join(recipe["recipe"].get("cuisineType", [])),
+                        recipe["recipe"].get("totalTime", 0),
+                        0,  # Initial play count
+                        False
+                    ))
+                conn.commit()
+
+            trending_recipes = recipes.get("hits", [])
+
+        return make_response(jsonify({'status': 'success', 'recipes': trending_recipes}), 200)
+
+    except Exception as e:
+        app.logger.error("Error fetching trending recipes: %s", e)
+        return make_response(jsonify({'error': str(e)}), 500)
+
 
 # -------------------------------------------------------------------------------------
 # Below code is for reference from song management. 
