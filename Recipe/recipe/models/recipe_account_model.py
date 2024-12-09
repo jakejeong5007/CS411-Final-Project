@@ -1,70 +1,87 @@
-"""
-File that handles functions like 
+import logging
+from typing import List, Optional
 
-save -> Saves recipe to user's profie
-preferences -> sets selected recipes to prefered recipe for specific user
-get_preferences -> gets current preference
-"""
+from recipe.utils.logger import configure_logger
+from recipe.models.recipe_model import Recipe
+
+logger = logging.getLogger(__name__)
+configure_logger(logger)
 
 class RecipeAccountModel:
   """
-    A class to manage the functionalities of a user's account
+  A class to manage recipes of a user's account.
+
+  Attributes:
+      pref_calories (Optional[int]): The preferred calorie limit.
+      pref_diet (Optional[str]): The preferred diet type.
+      favorites (List[Recipe]): The list of favorite recipes.
   """
-  
-  def save_recipe(user_id, recipe_id):
-    """ Save a recipe to a user's account
+
+  def __init__(self):
+      """
+      Initializes the RecipeAccountModel with empty preferences and an empty favorites list.
+      """
+      self.pref_calories: Optional[int] = None
+      self.pref_diet: Optional[str] = None
+      self.favorites: List[Recipe] = []
+
+  def get_user_preferences(self) -> List[Optional[int, str]]:
+      """
+      Retrieves the user's current preferences.
+
+      Returns:
+          List[Optional[int, str]]: A list containing the preferred calories and diet.
+      """
+      logger.info("Retrieving user preferences")
+      return [self.pref_calories, self.pref_diet]
+
+  def recommend_recipes(self, preferences: List[Optional[int, str]], cuisine: str) -> List[Recipe]:
+      """
+      Recommends recipes based on user preferences and cuisine.
+
+      Args:
+          preferences (List[Optional[int, str]]): The user's preferences [calories, diet].
+          cuisine (str): The preferred cuisine type.
+
+      Returns:
+          List[Recipe]: A list of recommended recipes matching the criteria.
+      """
+
+
+  def save(self, recipe: Recipe) -> None:
     """
-    logger.info('Saving new preferences for user %s', user_id)
-    
-    if not isinstance(preferences, dict):
-      logger.error("Preferences must be a valid dictionary")
-      raise TypeError("Preferences must be a valid dictionary")
+    Saves a recipe to the user's favorites.
 
-    if not user_id:
-      logger.error("User ID is invalid or missing")
-      raise ValueError("User ID must be provided")
+    Args:
+      recipe (Recipe): The recipe to save.
 
-    existing_preferences = self.preferences_dict.get(user_id)
-    if existing_preferences == preferences:
-      logger.warning("Preferences for User ID %s are already up to date", user_id)
-      return
-
-    self.preferences_dict[user_id] = preferences
-        logger.info("Preferences successfully saved for User ID %s", user_id)
-
-  def update_preferences(user_id, preferences):
-    """ Update user preferneces
+    Raises:
+      TypeError: If the recipe is not a valid Recipe instance.
+      ValueError: If the recipe is already in favorites.
     """
-    logger.info("Adding recipe %s to preferences for user %s", recipe_id, user_id)
+    logger.info("Saving a recipe to favorites")
+    if not isinstance(recipe, Recipe):
+      logger.error("Invalid recipe type")
+      raise TypeError("The provided recipe is not a valid Recipe instance.")
 
-    if not user_id or not recipe_id:
-      logger.error("User ID and Recipe ID must be provided")
-      raise ValueError("User ID and Recipe ID must be provided")
+    if recipe in self.favorites:
+      logger.error("Recipe is already in favorites")
+      raise ValueError("This recipe is already in the favorites list.")
 
-    if user_id not in self.preferences_dict:
-      self.preferences_dict[user_id] = {"recipes": []}
+    self.favorites.append(recipe)
+    logger.info("Recipe '%s' has been added to favorites", recipe.title)
 
-
-    user_recipes = self.preferences_dict[user_id].get("recipes", [])
-    if recipe_id in user_recipes:
-      logger.warning("Recipe %s is already saved for User ID %s", recipe_id, user_id)
-      return
-
-    user_recipes.append(recipe_id)
-    self.preferences[user_id]["recipes"] = user_recipes
-    logger.info("Recipe %s added successfully for User ID %s", recipe_id, user_id)
-
-  def get_preferences(user_id, preferences):
-    """ Retrieve user preferences
+  def update_preferences(self, preferences: List[Optional[int, str]]) -> None:
     """
-    logger.info("Fetching preferences for user %s", user_id)
+    Updates the user's preferences.
 
-    if not user_id:
-      logger.error("User ID is invalid or missing")
-      raise ValueError("User ID must be provided")
+    Args:
+      preferences (List[Optional[int, str]]): A list containing preferred calories and diet.
+    """
+    logger.info("Updating user preferences")
+    if len(preferences) != 2 or not isinstance(preferences[0], (int, type(None))) or not isinstance(preferences[1], (str, type(None))):
+        logger.error("Invalid preferences format")
+        raise ValueError("Preferences must be a list with [Optional[int], Optional[str]].")
 
-    return self.preferences.get(user_id, {})
-    
-
-    
-    
+    self.pref_calories, self.pref_diet = preferences
+    logger.info("Preferences updated to: calories=%s, diet=%s", self.pref_calories, self.pref_diet)

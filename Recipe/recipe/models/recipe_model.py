@@ -17,6 +17,11 @@ configure_logger(logger)
 
 @dataclass
 class Recipe:
+    id: int
+    title: str
+    ingredients: List[str]
+    calories: int
+     
     def __init__(self, title: str, url: str, ingredients: List[str], calories: int, diet_labels: str):
         self.title = title
         self.ingredients = ingredients
