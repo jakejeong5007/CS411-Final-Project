@@ -285,7 +285,7 @@ def save() -> Response:
 @app.route('/api/', methods=['PUT'])
 def preferences() -> Response:
     """
-    Gets the users recipe preferences
+    Updates the users recipe preferences
 
     Returns: 
         JSON response with user recipe preferences
@@ -310,6 +310,32 @@ def preferences() -> Response:
         app.logger.error("Failed to update preferences: %s", str(e))
         return make_response(jsonify({'error': str(e)}), 500)
 
+def getPreferences() -> Response:
+    """
+    Gets the users recipe preferences
+
+    Returns:
+        JSON response indicating the retrieval of the preferences of failure
+    """
+    app.logger.info("Retrieving user preferences")
+    try:
+        data = request.get_json()
+
+        user_id = data.get('userId')
+        preferences = data.get('preferences')
+
+    if not user_id or isinstance(preferences, dict):
+        return make_response(jsonify({'error': 'Invalid input, userId and preferences required'}), 400)
+
+    app.logger.info('Retrieving preferences for user: %s', user_id)
+    recipe_account_model.get_preferences(user_id = user_id, preferences = preferences)
+
+    app.logger.info("Preferences retrieved for user: %s", user_id)
+    return make_response(jsonify({'status': 'success', 'preferences': preferences}), 200)
+
+     except Exception as e:
+        app.logger.error("Failed to update preferences: %s", str(e))
+        return make_response(jsonify({'error': str(e)}), 500)
 
 # -------------------------------------------------------------------------------------
 # Below code is for reference from song management. 
