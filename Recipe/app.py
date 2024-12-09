@@ -1,1016 +1,330 @@
-from dotenv import load_dotenv
-from flask import Flask, jsonify, make_response, Response, request
+from dataclasses import dataclass
+import logging
+import os
+import sqlite3
 
-from music_collection.models import song_model
-from music_collection.models.playlist_model import PlaylistModel
-from music_collection.utils.sql_utils import check_database_connection, check_table_exists
-
-
-# Load environment variables from .env file
-load_dotenv()
-
-app = Flask(__name__)
-
-playlist_model = PlaylistModel()
+from music_collection.utils.logger import configure_logger
+from music_collection.utils.random_utils import get_random
+from music_collection.utils.sql_utils import get_db_connection
 
 
-####################################################
-#
-# Healthchecks
-#
-####################################################
-
-@app.route('/api/health', methods=['GET'])
-def healthcheck() -> Response:
-    """
-    Health check route to verify the service is running.
-
-    Returns:
-        JSON response indicating the health status of the service.
-    """
-    app.logger.info('Health check')
-    return make_response(jsonify({'status': 'healthy'}), 200)
+logger = logging.getLogger(__name__)
+configure_logger(logger)
 
 
-@app.route('/api/db-check', methods=['GET'])
-def db_check() -> Response:
-    """
-    Route to check if the database connection and users table are functional.
-
-    Returns:
-        JSON response indicating the database health status.
-    Raises:
-        404 error if there is an issue with the database.
-    """
-    try:
-        app.logger.info("Checking database connection...")
-        check_database_connection()
-        app.logger.info("Database connection is OK.")
-        app.logger.info("Checking if user table exists...")
-        check_table_exists("users")
-        app.logger.info("users table exists.")
-        return make_response(jsonify({'database_status': 'healthy'}), 200)
-    except Exception as e:
-        return make_response(jsonify({'error': str(e)}), 404)
-
-##########################################################
-#
-# Password Management
-#
-##########################################################
-
-@app.route('/api/login', methods=['POST'])
-def login() -> Response:
-    """
-    Route to check if provided password exists in database
+@dataclass
+class Recipe:
+    name: str
+    recipeId: int
+    cuisine: str
+    calories: int
     
-    Expected JSON Input:
-        - user_name (str): The user name for account 
-        - user_password (str): The password for account
-        
-    Returns:
-        JSON response indicating the success of the login
+
+    def __post_init__(self):
+        if self.duration <= 0:
+            raise ValueError(f"Duration must be greater than 0, got {self.duration}")
+        if self.year <= 1900:
+            raise ValueError(f"Year must be greater than 1900, got {self.year}")
+
+
+def create_song(artist: str, title: str, year: int, genre: str, duration: int) -> None:
+    """
+    Creates a new song in the songs table.
+
+    Args:
+        artist (str): The artist's name.
+        title (str): The song title.
+        year (int): The year the song was released.
+        genre (str): The song genre.
+        duration (int): The duration of the song in seconds.
+
     Raises:
-        400 error if input validation fails
-        500 error if there is an issue during login
+        ValueError: If year or duration are invalid.
+        sqlite3.IntegrityError: If a song with the same compound key (artist, title, year) already exists.
+        sqlite3.Error: For any other database errors.
     """
-    app.logger.info('Login attempt start')
+    # Validate the required fields
+    if not isinstance(year, int) or year < 1900:
+        raise ValueError(f"Invalid year provided: {year} (must be an integer greater than or equal to 1900).")
+    if not isinstance(duration, int) or duration <= 0:
+        raise ValueError(f"Invalid song duration: {duration} (must be a positive integer).")
+
     try:
-        data = request.get_json()
-        
-        user_name = data.get('user_name')
-        user_password = data.get('user_password')
-        if not user_name or not user_password:
-            return make_response(jsonify({'error': 'Invalid input, all fields are required with valid values'}), 400)
-        
-        app.logger.info('Validating given password for: %s', user_name)
-        # Insert function to check the given password with the password in db
-        app.logger.info('Password check completed for: %s', user_name)
-        return make_response(jsonify({'status': 'success', 'user_name': user_name}), 201)
-    except Exception as e:
-        app.logger.error('Failed to check password')
-        return make_response(jsonify({'error': str(e)}), 500)
-        
-@app.route('/api/create-account', methods=['POST'])
-def create_account() -> Response:
+        # Use the context manager to handle the database connection
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO songs (artist, title, year, genre, duration)
+                VALUES (?, ?, ?, ?, ?)
+            """, (artist, title, year, genre, duration))
+            conn.commit()
+
+            logger.info("Song created successfully: %s - %s (%d)", artist, title, year)
+
+    except sqlite3.IntegrityError as e:
+        logger.error("Song with artist '%s', title '%s', and year %d already exists.", artist, title, year)
+        raise ValueError(f"Song with artist '{artist}', title '{title}', and year {year} already exists.") from e
+    except sqlite3.Error as e:
+        logger.error("Database error while creating song: %s", str(e))
+        raise sqlite3.Error(f"Database error: {str(e)}")
+
+def clear_catalog() -> None:
     """
-    Route to create a new user account
-    
-    Expected JSON Input:
-        - user_name (str): The user name for account
-        - user_password (str): The password for account
-        
-    Returns:
-        JSON response indicating the success of creating the account
+    Recreates the songs table, effectively deleting all songs.
+
     Raises:
-        400 error if input validation fails
-        500 error if there is an issue creating user account
+        sqlite3.Error: If any database error occurs.
     """
-    app.logger.info('Creating account')
     try:
-        data = request.get_json()
-        
-        user_name = data.get('user_name')
-        user_password = data.get('user_password')
-        
-        if not user_name or not user_password:
-            return make_response(jsonify({'error': 'Invalid input, all fields are required with valid values'}), 400)
-        
-        app.logger.info('Creating account')
-        # Some function to create account 
-        app.logger.info('Account created')
-        return make_response(jsonify({'status': 'success', 'user_name': user_name}), 201)
-    except Exception as e:
-        app.logger.error('Failed to create account')
-        return make_response(jsonify({'error': str(e)}), 500)
-    
-                           
-    
-@app.route('/api/update-password', methods=['PATCH'])
-def update_password() -> Response:
+        with open(os.getenv("SQL_CREATE_TABLE_PATH", "/app/sql/create_song_table.sql"), "r") as fh:
+            create_table_script = fh.read()
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.executescript(create_table_script)
+            conn.commit()
+
+            logger.info("Catalog cleared successfully.")
+
+    except sqlite3.Error as e:
+        logger.error("Database error while clearing catalog: %s", str(e))
+        raise e
+
+def delete_song(song_id: int) -> None:
     """
-    Route to update password for user account
-    
-    Expected JSON Input:
-        - user_name (str): The user name for account
-        - user_password (str): The password the user wants to update to
-        
-    Returns:
-        JSON reponse indicating the success of creating the accoutn
+    Soft deletes a song from the catalog by marking it as deleted.
+
+    Args:
+        song_id (int): The ID of the song to delete.
+
     Raises:
-        400 error if input validation fails
-        500 error if there is an issue updating user password
+        ValueError: If the song with the given ID does not exist or is already marked as deleted.
+        sqlite3.Error: If any database error occurs.
     """
-    app.logger.info('Updating user password')
-    
     try:
-        data = request.get_json()
-        
-        user_name = data.get('user_name')
-        user_password = data.get('user_password')
-        
-        if not user_name or not user_password:
-            return make_response(jsonify({'error': 'Invalid input, all fields are required with valid values'}), 400)
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
 
-        app.logger.info('Updating password')
-        # Some function to update password
-        app.logger.info('Password updated')
-        return make_response(jsonify({'status': 'success', 'user_name': user_name}), 201)
-    except Exception as e:
-        app.logger.error('Failed to update password')
-        return make_response(jsonify({'error': str(e)}), 500)
+            # Check if the song exists and if it's already deleted
+            cursor.execute("SELECT deleted FROM songs WHERE id = ?", (song_id,))
+            try:
+                deleted = cursor.fetchone()[0]
+                if deleted:
+                    logger.info("Song with ID %s has already been deleted", song_id)
+                    raise ValueError(f"Song with ID {song_id} has already been deleted")
+            except TypeError:
+                logger.info("Song with ID %s not found", song_id)
+                raise ValueError(f"Song with ID {song_id} not found")
 
+            # Perform the soft delete by setting 'deleted' to TRUE
+            cursor.execute("UPDATE songs SET deleted = TRUE WHERE id = ?", (song_id,))
+            conn.commit()
 
-##########################################################
-#
-# Recipe Management
-#
-##########################################################
+            logger.info("Song with ID %s marked as deleted.", song_id)
 
-@app.route('/api/search', methods=['GET'])
-def search() -> Response:
+    except sqlite3.Error as e:
+        logger.error("Database error while deleting song: %s", str(e))
+        raise e
+
+def get_song_by_id(song_id: int) -> Song:
     """
-    Route to search for recipes by ingredients.
+    Retrieves a song from the catalog by its song ID.
 
-    Query Parameters:
-        - ingredients (str): Comma-separated list of ingredients (required).
-        - diet (str, optional): Dietary restriction (e.g., vegan, keto).
-        - calories (str, optional): Calorie range (e.g., 200-400).
+    Args:
+        song_id (int): The ID of the song to retrieve.
 
     Returns:
-        JSON response with search results or an error message.
-    """
-    try:
-        ingredients = request.args.get('ingredients')
-        diet = request.args.get('diet')
-        calories = request.args.get('calories')
+        Song: The Song object corresponding to the song_id.
 
-        if not ingredients:
-            return make_response(jsonify({'error': 'Ingredients parameter is required'}), 400)
-
-        app.logger.info("Searching recipes with ingredients: %s, diet: %s, calories: %s", ingredients, diet, calories)
-
-        # Fetch recipes using the utility function
-        recipes = recipe_model.search_recipes(ingredients=ingredients, diet=diet, calories=calories)
-        return make_response(jsonify({'status': 'success', 'recipes': recipes}), 200)
-    except Exception as e:
-        app.logger.error("Error searching for recipes: %s", str(e))
-        return make_response(jsonify({'error': str(e)}), 500)
-
-@app.route('/api/recommend', methods=['GET'])
-def recommend() -> Response:
-    """
-    Route to get personalized recipe recommendations.
-
-    Query Parameters:
-        - userId (str): User ID (required).
-        - cuisine (str, optional): Preferred cuisine type.
-
-    Returns:
-        JSON response with recommended recipes or an error message.
-    """
-    try:
-        user_id = request.args.get('userId')
-        cuisine = request.args.get('cuisine')
-
-        if not user_id:
-            return make_response(jsonify({'error': 'User ID parameter is required'}), 400)
-
-        app.logger.info("Fetching recommendations for userId: %s, cuisine: %s", user_id, cuisine)
-
-        # Fetch user preferences and recommend recipes
-        preferences = recipe_account_model.get_user_preferences(user_id)
-        if not preferences:
-            return make_response(jsonify({'error': 'User preferences not found'}), 404)
-
-        recipes = recipe_model.recommend_recipes(preferences, cuisine=cuisine)
-        return make_response(jsonify({'status': 'success', 'recipes': recipes}), 200)
-    except Exception as e:
-        app.logger.error("Error recommending recipes: %s", str(e))
-        return make_response(jsonify({'error': str(e)}), 500)
-
-@app.route('/api/trending', methods=['GET'])
-def trending() -> Response:
-    """
-    Route to view trending recipes.
-
-    Returns:
-        JSON response with trending recipes or an error message.
-    """
-    try:
-        app.logger.info("Fetching trending recipes")
-        
-        # Fetch trending recipes from the model
-        trending_recipes = recipe_model.get_trending_recipes()
-        return make_response(jsonify({'status': 'success', 'recipes': trending_recipes}), 200)
-    except Exception as e:
-        app.logger.error("Error fetching trending recipes: %s", str(e))
-        return make_response(jsonify({'error': str(e)}), 500)
-
-
-@app.route('/api/saveRecipe', methods=['POST'])
-def save() -> Response:
-    """
-    Saves recipes to a user's profile
-
-    Expected JSON Input:
-        userId (str): The user's ID
-        recipeId (str): The recipe's ID
-
-    Returns: 
-        JSON response indicating the success of saving the recipe
     Raises:
-        400 error if input validation fails.
-        500 error if there is an issue adding the song to the playlist.
+        ValueError: If the song is not found or is marked as deleted.
     """
-    app.logger.info('Saving a recipe to the user profile')
     try:
-        data = request.get_json()
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            logger.info("Attempting to retrieve song with ID %s", song_id)
+            cursor.execute("""
+                SELECT id, artist, title, year, genre, duration, deleted
+                FROM songs
+                WHERE id = ?
+            """, (song_id,))
+            row = cursor.fetchone()
 
-        user_id = data.get('userId')
-        recipe_id = data.get('recipeId')
+            if row:
+                if row[6]:  # deleted flag
+                    logger.info("Song with ID %s has been deleted", song_id)
+                    raise ValueError(f"Song with ID {song_id} has been deleted")
+                logger.info("Song with ID %s found", song_id)
+                return Song(id=row[0], artist=row[1], title=row[2], year=row[3], genre=row[4], duration=row[5])
+            else:
+                logger.info("Song with ID %s not found", song_id)
+                raise ValueError(f"Song with ID {song_id} not found")
 
-    if not user_id or recipe_id:
-        return make_response(jsonify({'error': 'Invalid input, all fields are required with valid values'}), 400)
+    except sqlite3.Error as e:
+        logger.error("Database error while retrieving song by ID %s: %s", song_id, str(e))
+        raise e
 
-    app.logger.info('Saving recipe: %s - %s', user_id, receipe_id)
-        recipe_model.save(userId = user_id, recipeId = recipe_id)
-        app.logger.info("Song saved to account: %s - %s", user_id, recipe_id)
-        return make_response(jsonify({'status': 'success', 'receipe': recipe_id}), 201)
-
-    except Exception as e:
-        app.logger.error("Failed to add recipe: %s", str(e))
-        return make_response(jsonify({'error': str(e)}), 500)
-
-@app.route('/api/', methods=['PUT'])
-def preferences() -> Response:
+def get_song_by_compound_key(artist: str, title: str, year: int) -> Song:
     """
-    Updates the users recipe preferences
+    Retrieves a song from the catalog by its compound key (artist, title, year).
 
-    Returns: 
-        JSON response with user recipe preferences
-    """
-    app.logger.info("Updating user preferences")
-    try:
-        data = request.get_json()
-
-        user_id = data.get('userId')
-        preferences = data.get('preferences')
-
-    if not user_id or isinstance(preferences, dict):
-        return make_response(jsonify({'error': 'Invalid input, userId and preferences required'}), 400)
-
-    app.logger.info('Updating preferences for user: %s', user_id)
-    recipe_account_model.update_preferences(user_id = user_id, preferences = preferences)
-
-    app.logger.info("Preferences updated for user: %s", user_id)
-    return make_response(jsonify({'status': 'success', 'preferences': preferences}), 200)
-
-     except Exception as e:
-        app.logger.error("Failed to update preferences: %s", str(e))
-        return make_response(jsonify({'error': str(e)}), 500)
-
-def getPreferences() -> Response:
-    """
-    Gets the users recipe preferences
+    Args:
+        artist (str): The artist of the song.
+        title (str): The title of the song.
+        year (int): The year of the song.
 
     Returns:
-        JSON response indicating the retrieval of the preferences of failure
-    """
-    app.logger.info("Retrieving user preferences")
-    try:
-        data = request.get_json()
+        Song: The Song object corresponding to the compound key.
 
-        user_id = data.get('userId')
-        preferences = data.get('preferences')
-
-    if not user_id or isinstance(preferences, dict):
-        return make_response(jsonify({'error': 'Invalid input, userId and preferences required'}), 400)
-
-    app.logger.info('Retrieving preferences for user: %s', user_id)
-    recipe_account_model.get_preferences(user_id = user_id, preferences = preferences)
-
-    app.logger.info("Preferences retrieved for user: %s", user_id)
-    return make_response(jsonify({'status': 'success', 'preferences': preferences}), 200)
-
-     except Exception as e:
-        app.logger.error("Failed to update preferences: %s", str(e))
-        return make_response(jsonify({'error': str(e)}), 500)
-
-# -------------------------------------------------------------------------------------
-# Below code is for reference from song management. 
-# Code for our project should be above this comment.
-
-##########################################################
-#
-# Song Management
-#
-##########################################################
-
-@app.route('/api/create-song', methods=['POST'])
-def add_song() -> Response:
-    """
-    Route to add a new song to the playlist.
-
-    Expected JSON Input:
-        - artist (str): The artist's name.
-        - title (str): The song title.
-        - year (int): The year the song was released.
-        - genre (str): The genre of the song.
-        - duration (int): The duration of the song in seconds.
-
-    Returns:
-        JSON response indicating the success of the song addition.
     Raises:
-        400 error if input validation fails.
-        500 error if there is an issue adding the song to the playlist.
-    """
-    app.logger.info('Adding a new song to the catalog')
-    try:
-        data = request.get_json()
-
-        artist = data.get('artist')
-        title = data.get('title')
-        year = data.get('year')
-        genre = data.get('genre')
-        duration = data.get('duration')
-
-        if not artist or not title or year is None or not genre or duration is None:
-            return make_response(jsonify({'error': 'Invalid input, all fields are required with valid values'}), 400)
-
-        # Add the song to the playlist
-        app.logger.info('Adding song: %s - %s', artist, title)
-        song_model.create_song(artist=artist, title=title, year=year, genre=genre, duration=duration)
-        app.logger.info("Song added to playlist: %s - %s", artist, title)
-        return make_response(jsonify({'status': 'success', 'song': title}), 201)
-    except Exception as e:
-        app.logger.error("Failed to add song: %s", str(e))
-        return make_response(jsonify({'error': str(e)}), 500)
-
-@app.route('/api/clear-catalog', methods=['DELETE'])
-def clear_catalog() -> Response:
-    """
-    Route to clear the entire song catalog (recreates the table).
-
-    Returns:
-        JSON response indicating success of the operation or error message.
+        ValueError: If the song is not found or is marked as deleted.
     """
     try:
-        app.logger.info("Clearing the song catalog")
-        song_model.clear_catalog()
-        return make_response(jsonify({'status': 'success'}), 200)
-    except Exception as e:
-        app.logger.error(f"Error clearing catalog: {e}")
-        return make_response(jsonify({'error': str(e)}), 500)
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            logger.info("Attempting to retrieve song with artist '%s', title '%s', and year %d", artist, title, year)
+            cursor.execute("""
+                SELECT id, artist, title, year, genre, duration, deleted
+                FROM songs
+                WHERE artist = ? AND title = ? AND year = ?
+            """, (artist, title, year))
+            row = cursor.fetchone()
 
-@app.route('/api/delete-song/<int:song_id>', methods=['DELETE'])
-def delete_song(song_id: int) -> Response:
+            if row:
+                if row[6]:  # deleted flag
+                    logger.info("Song with artist '%s', title '%s', and year %d has been deleted", artist, title, year)
+                    raise ValueError(f"Song with artist '{artist}', title '{title}', and year {year} has been deleted")
+                logger.info("Song with artist '%s', title '%s', and year %d found", artist, title, year)
+                return Song(id=row[0], artist=row[1], title=row[2], year=row[3], genre=row[4], duration=row[5])
+            else:
+                logger.info("Song with artist '%s', title '%s', and year %d not found", artist, title, year)
+                raise ValueError(f"Song with artist '{artist}', title '{title}', and year {year} not found")
+
+    except sqlite3.Error as e:
+        logger.error("Database error while retrieving song by compound key (artist '%s', title '%s', year %d): %s", artist, title, year, str(e))
+        raise e
+
+def get_all_songs(sort_by_play_count: bool = False) -> list[dict]:
     """
-    Route to delete a song by its ID (soft delete).
+    Retrieves all songs that are not marked as deleted from the catalog.
 
-    Path Parameter:
-        - song_id (int): The ID of the song to delete.
+    Args:
+        sort_by_play_count (bool): If True, sort the songs by play count in descending order.
 
     Returns:
-        JSON response indicating success of the operation or error message.
+        list[dict]: A list of dictionaries representing all non-deleted songs with play_count.
+
+    Logs:
+        Warning: If the catalog is empty.
     """
     try:
-        app.logger.info(f"Deleting song by ID: {song_id}")
-        song_model.delete_song(song_id)
-        return make_response(jsonify({'status': 'success'}), 200)
-    except Exception as e:
-        app.logger.error(f"Error deleting song: {e}")
-        return make_response(jsonify({'error': str(e)}), 500)
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            logger.info("Attempting to retrieve all non-deleted songs from the catalog")
 
+            # Determine the sort order based on the 'sort_by_play_count' flag
+            query = """
+                SELECT id, artist, title, year, genre, duration, play_count
+                FROM songs
+                WHERE deleted = FALSE
+            """
+            if sort_by_play_count:
+                query += " ORDER BY play_count DESC"
 
-@app.route('/api/get-all-songs-from-catalog', methods=['GET'])
-def get_all_songs() -> Response:
+            cursor.execute(query)
+            rows = cursor.fetchall()
+
+            if not rows:
+                logger.warning("The song catalog is empty.")
+                return []
+
+            songs = [
+                {
+                    "id": row[0],
+                    "artist": row[1],
+                    "title": row[2],
+                    "year": row[3],
+                    "genre": row[4],
+                    "duration": row[5],
+                    "play_count": row[6],
+                }
+                for row in rows
+            ]
+            logger.info("Retrieved %d songs from the catalog", len(songs))
+            return songs
+
+    except sqlite3.Error as e:
+        logger.error("Database error while retrieving all songs: %s", str(e))
+        raise e
+
+def get_random_song() -> Song:
     """
-    Route to retrieve all songs in the catalog (non-deleted), with an option to sort by play count.
-
-    Query Parameter:
-        - sort_by_play_count (bool, optional): If true, sort songs by play count.
+    Retrieves a random song from the catalog.
 
     Returns:
-        JSON response with the list of songs or error message.
-    """
-    try:
-        # Extract query parameter for sorting by play count
-        sort_by_play_count = request.args.get('sort_by_play_count', 'false').lower() == 'true'
+        Song: A randomly selected Song object.
 
-        app.logger.info("Retrieving all songs from the catalog, sort_by_play_count=%s", sort_by_play_count)
-        songs = song_model.get_all_songs(sort_by_play_count=sort_by_play_count)
-
-        return make_response(jsonify({'status': 'success', 'songs': songs}), 200)
-    except Exception as e:
-        app.logger.error(f"Error retrieving songs: {e}")
-        return make_response(jsonify({'error': str(e)}), 500)
-
-
-@app.route('/api/get-song-from-catalog-by-id/<int:song_id>', methods=['GET'])
-def get_song_by_id(song_id: int) -> Response:
-    """
-    Route to retrieve a song by its ID.
-
-    Path Parameter:
-        - song_id (int): The ID of the song.
-
-    Returns:
-        JSON response with the song details or error message.
-    """
-    try:
-        app.logger.info(f"Retrieving song by ID: {song_id}")
-        song = song_model.get_song_by_id(song_id)
-        return make_response(jsonify({'status': 'success', 'song': song}), 200)
-    except Exception as e:
-        app.logger.error(f"Error retrieving song by ID: {e}")
-        return make_response(jsonify({'error': str(e)}), 500)
-
-@app.route('/api/get-song-from-catalog-by-compound-key', methods=['GET'])
-def get_song_by_compound_key() -> Response:
-    """
-    Route to retrieve a song by its compound key (artist, title, year).
-
-    Query Parameters:
-        - artist (str): The artist's name.
-        - title (str): The song title.
-        - year (int): The year the song was released.
-
-    Returns:
-        JSON response with the song details or error message.
-    """
-    try:
-        # Extract query parameters from the request
-        artist = request.args.get('artist')
-        title = request.args.get('title')
-        year = request.args.get('year')
-
-        if not artist or not title or not year:
-            return make_response(jsonify({'error': 'Missing required query parameters: artist, title, year'}), 400)
-
-        # Attempt to cast year to an integer
-        try:
-            year = int(year)
-        except ValueError:
-            return make_response(jsonify({'error': 'Year must be an integer'}), 400)
-
-        app.logger.info(f"Retrieving song by compound key: {artist}, {title}, {year}")
-        song = song_model.get_song_by_compound_key(artist, title, year)
-        return make_response(jsonify({'status': 'success', 'song': song}), 200)
-
-    except Exception as e:
-        app.logger.error(f"Error retrieving song by compound key: {e}")
-        return make_response(jsonify({'error': str(e)}), 500)
-
-@app.route('/api/get-random-song', methods=['GET'])
-def get_random_song() -> Response:
-    """
-    Route to retrieve a random song from the catalog.
-
-    Returns:
-        JSON response with the details of a random song or error message.
-    """
-    try:
-        app.logger.info("Retrieving a random song from the catalog")
-        song = song_model.get_random_song()
-        return make_response(jsonify({'status': 'success', 'song': song}), 200)
-    except Exception as e:
-        app.logger.error(f"Error retrieving a random song: {e}")
-        return make_response(jsonify({'error': str(e)}), 500)
-
-
-############################################################
-#
-# Playlist Management
-#
-############################################################
-
-@app.route('/api/add-song-to-playlist', methods=['POST'])
-def add_song_to_playlist() -> Response:
-    """
-    Route to add a song to the playlist by compound key (artist, title, year).
-
-    Expected JSON Input:
-        - artist (str): The artist's name.
-        - title (str): The song title.
-        - year (int): The year the song was released.
-
-    Returns:
-        JSON response indicating success of the addition or error message.
-    """
-    try:
-        data = request.get_json()
-
-        artist = data.get('artist')
-        title = data.get('title')
-        year = data.get('year')
-
-        if not artist or not title or not year:
-            return make_response(jsonify({'error': 'Invalid input. Artist, title, and year are required.'}), 400)
-
-        # Lookup the song by compound key
-        song = song_model.get_song_by_compound_key(artist, title, year)
-
-        # Add song to playlist
-        playlist_model.add_song_to_playlist(song)
-
-        app.logger.info(f"Song added to playlist: {artist} - {title} ({year})")
-        return make_response(jsonify({'status': 'success', 'message': 'Song added to playlist'}), 201)
-
-    except Exception as e:
-        app.logger.error(f"Error adding song to playlist: {e}")
-        return make_response(jsonify({'error': str(e)}), 500)
-
-@app.route('/api/remove-song-from-playlist', methods=['DELETE'])
-def remove_song_by_song_id() -> Response:
-    """
-    Route to remove a song from the playlist by compound key (artist, title, year).
-
-    Expected JSON Input:
-        - artist (str): The artist's name.
-        - title (str): The song title.
-        - year (int): The year the song was released.
-
-    Returns:
-        JSON response indicating success of the removal or error message.
-    """
-    try:
-        data = request.get_json()
-
-        artist = data.get('artist')
-        title = data.get('title')
-        year = data.get('year')
-
-        if not artist or not title or not year:
-            return make_response(jsonify({'error': 'Invalid input. Artist, title, and year are required.'}), 400)
-
-        # Lookup the song by compound key
-        song = song_model.get_song_by_compound_key(artist, title, year)
-
-        # Remove song from playlist
-        playlist_model.remove_song_by_song_id(song.id)
-
-        app.logger.info(f"Song removed from playlist: {artist} - {title} ({year})")
-        return make_response(jsonify({'status': 'success', 'message': 'Song removed from playlist'}), 200)
-
-    except Exception as e:
-        app.logger.error(f"Error removing song from playlist: {e}")
-        return make_response(jsonify({'error': str(e)}), 500)
-
-@app.route('/api/remove-song-from-playlist-by-track-number/<int:track_number>', methods=['DELETE'])
-def remove_song_by_track_number(track_number: int) -> Response:
-    """
-    Route to remove a song from the playlist by track number.
-
-    Path Parameter:
-        - track_number (int): The track number of the song to remove.
-
-    Returns:
-        JSON response indicating success of the removal or an error message.
-    """
-    try:
-        app.logger.info(f"Removing song from playlist by track number: {track_number}")
-
-        # Remove song by track number
-        playlist_model.remove_song_by_track_number(track_number)
-
-        return make_response(jsonify({'status': 'success', 'message': f'Song at track number {track_number} removed from playlist'}), 200)
-
-    except ValueError as e:
-        app.logger.error(f"Error removing song by track number: {e}")
-        return make_response(jsonify({'error': str(e)}), 404)
-    except Exception as e:
-        app.logger.error(f"Error removing song from playlist: {e}")
-        return make_response(jsonify({'error': str(e)}), 500)
-
-@app.route('/api/clear-playlist', methods=['POST'])
-def clear_playlist() -> Response:
-    """
-    Route to clear all songs from the playlist.
-
-    Returns:
-        JSON response indicating success of the operation or an error message.
-    """
-    try:
-        app.logger.info('Clearing the playlist')
-
-        # Clear the entire playlist
-        playlist_model.clear_playlist()
-
-        return make_response(jsonify({'status': 'success', 'message': 'Playlist cleared'}), 200)
-
-    except Exception as e:
-        app.logger.error(f"Error clearing the playlist: {e}")
-        return make_response(jsonify({'error': str(e)}), 500)
-
-############################################################
-#
-# Play Playlist
-#
-############################################################
-
-@app.route('/api/play-current-song', methods=['POST'])
-def play_current_song() -> Response:
-    """
-    Route to play the current song in the playlist.
-
-    Returns:
-        JSON response indicating success of the operation.
     Raises:
-        500 error if there is an issue playing the current song.
+        ValueError: If the catalog is empty.
     """
     try:
-        app.logger.info('Playing current song')
-        current_song = playlist_model.get_current_song()
-        playlist_model.play_current_song()
+        all_songs = get_all_songs()
 
-        return make_response(jsonify({
-            'status': 'success',
-            'song': {
-                'id': current_song.id,
-                'artist': current_song.artist,
-                'title': current_song.title,
-                'year': current_song.year,
-                'genre': current_song.genre,
-                'duration': current_song.duration
-            }
-        }), 200)
+        if not all_songs:
+            logger.info("Cannot retrieve random song because the song catalog is empty.")
+            raise ValueError("The song catalog is empty.")
+
+        # Get a random index using the random.org API
+        random_index = get_random(len(all_songs))
+        logger.info("Random index selected: %d (total songs: %d)", random_index, len(all_songs))
+
+        # Return the song at the random index, adjust for 0-based indexing
+        song_data = all_songs[random_index - 1]
+        return Song(
+            id=song_data["id"],
+            artist=song_data["artist"],
+            title=song_data["title"],
+            year=song_data["year"],
+            genre=song_data["genre"],
+            duration=song_data["duration"]
+        )
+
     except Exception as e:
-        app.logger.error(f"Error playing current song: {e}")
-        return make_response(jsonify({'error': str(e)}), 500)
+        logger.error("Error while retrieving random song: %s", str(e))
+        raise e
 
-
-@app.route('/api/play-entire-playlist', methods=['POST'])
-def play_entire_playlist() -> Response:
+def update_play_count(song_id: int) -> None:
     """
-    Route to play all songs in the playlist.
+    Increments the play count of a song by song ID.
 
-    Returns:
-        JSON response indicating success of the operation.
+    Args:
+        song_id (int): The ID of the song whose play count should be incremented.
+
     Raises:
-        500 error if there is an issue playing the playlist.
+        ValueError: If the song does not exist or is marked as deleted.
+        sqlite3.Error: If there is a database error.
     """
     try:
-        app.logger.info('Playing entire playlist')
-        playlist_model.play_entire_playlist()
-        return make_response(jsonify({'status': 'success'}), 200)
-    except Exception as e:
-        app.logger.error(f"Error playing playlist: {e}")
-        return make_response(jsonify({'error': str(e)}), 500)
-
-@app.route('/api/play-rest-of-playlist', methods=['POST'])
-def play_rest_of_playlist() -> Response:
-    """
-    Route to play the rest of the playlist from the current track.
-
-    Returns:
-        JSON response indicating success of the operation.
-    Raises:
-        500 error if there is an issue playing the rest of the playlist.
-    """
-    try:
-        app.logger.info('Playing rest of the playlist')
-        playlist_model.play_rest_of_playlist()
-        return make_response(jsonify({'status': 'success'}), 200)
-    except Exception as e:
-        app.logger.error(f"Error playing rest of the playlist: {e}")
-        return make_response(jsonify({'error': str(e)}), 500)
-
-@app.route('/api/rewind-playlist', methods=['POST'])
-def rewind_playlist() -> Response:
-    """
-    Route to rewind the playlist to the first song.
-
-    Returns:
-        JSON response indicating success of the operation.
-    Raises:
-        500 error if there is an issue rewinding the playlist.
-    """
-    try:
-        app.logger.info('Rewinding playlist to the first song')
-        playlist_model.rewind_playlist()
-        return make_response(jsonify({'status': 'success'}), 200)
-    except Exception as e:
-        app.logger.error(f"Error rewinding playlist: {e}")
-        return make_response(jsonify({'error': str(e)}), 500)
-
-@app.route('/api/get-all-songs-from-playlist', methods=['GET'])
-def get_all_songs_from_playlist() -> Response:
-    """
-    Route to retrieve all songs in the playlist.
-
-    Returns:
-        JSON response with the list of songs or an error message.
-    """
-    try:
-        app.logger.info("Retrieving all songs from the playlist")
-
-        # Get all songs from the playlist
-        songs = playlist_model.get_all_songs()
-
-        return make_response(jsonify({'status': 'success', 'songs': songs}), 200)
-
-    except Exception as e:
-        app.logger.error(f"Error retrieving songs from playlist: {e}")
-        return make_response(jsonify({'error': str(e)}), 500)
-
-@app.route('/api/get-song-from-playlist-by-track-number/<int:track_number>', methods=['GET'])
-def get_song_by_track_number(track_number: int) -> Response:
-    """
-    Route to retrieve a song by its track number from the playlist.
-
-    Path Parameter:
-        - track_number (int): The track number of the song.
-
-    Returns:
-        JSON response with the song details or error message.
-    """
-    try:
-        app.logger.info(f"Retrieving song from playlist by track number: {track_number}")
-
-        # Get the song by track number
-        song = playlist_model.get_song_by_track_number(track_number)
-
-        return make_response(jsonify({'status': 'success', 'song': song}), 200)
-
-    except ValueError as e:
-        app.logger.error(f"Error retrieving song by track number: {e}")
-        return make_response(jsonify({'error': str(e)}), 404)
-    except Exception as e:
-        app.logger.error(f"Error retrieving song from playlist: {e}")
-        return make_response(jsonify({'error': str(e)}), 500)
-
-@app.route('/api/get-current-song', methods=['GET'])
-def get_current_song() -> Response:
-    """
-    Route to retrieve the current song being played.
-
-    Returns:
-        JSON response with the current song details or error message.
-    """
-    try:
-        app.logger.info("Retrieving the current song from the playlist")
-
-        # Get the current song
-        current_song = playlist_model.get_current_song()
-
-        return make_response(jsonify({'status': 'success', 'current_song': current_song}), 200)
-
-    except Exception as e:
-        app.logger.error(f"Error retrieving current song: {e}")
-        return make_response(jsonify({'error': str(e)}), 500)
-
-@app.route('/api/get-playlist-length-duration', methods=['GET'])
-def get_playlist_length_and_duration() -> Response:
-    """
-    Route to retrieve both the length (number of songs) and the total duration of the playlist.
-
-    Returns:
-        JSON response with the playlist length and total duration or error message.
-    """
-    try:
-        app.logger.info("Retrieving playlist length and total duration")
-
-        # Get playlist length and duration
-        playlist_length = playlist_model.get_playlist_length()
-        playlist_duration = playlist_model.get_playlist_duration()
-
-        return make_response(jsonify({
-            'status': 'success',
-            'playlist_length': playlist_length,
-            'playlist_duration': playlist_duration
-        }), 200)
-
-    except Exception as e:
-        app.logger.error(f"Error retrieving playlist length and duration: {e}")
-        return make_response(jsonify({'error': str(e)}), 500)
-
-@app.route('/api/go-to-track-number/<int:track_number>', methods=['POST'])
-def go_to_track_number(track_number: int) -> Response:
-    """
-    Route to set the playlist to start playing from a specific track number.
-
-    Path Parameter:
-        - track_number (int): The track number to set as the current song.
-
-    Returns:
-        JSON response indicating success or an error message.
-    """
-    try:
-        app.logger.info(f"Going to track number: {track_number}")
-
-        # Set the playlist to start at the given track number
-        playlist_model.go_to_track_number(track_number)
-
-        return make_response(jsonify({'status': 'success', 'track_number': track_number}), 200)
-    except ValueError as e:
-        app.logger.error(f"Error going to track number {track_number}: {e}")
-        return make_response(jsonify({'error': str(e)}), 400)
-    except Exception as e:
-        app.logger.error(f"Error going to track number: {e}")
-        return make_response(jsonify({'error': str(e)}), 500)
-
-############################################################
-#
-# Arrange Playlist
-#
-############################################################
-
-@app.route('/api/move-song-to-beginning', methods=['POST'])
-def move_song_to_beginning() -> Response:
-    """
-    Route to move a song to the beginning of the playlist.
-
-    Expected JSON Input:
-        - artist (str): The artist of the song.
-        - title (str): The title of the song.
-        - year (int): The year the song was released.
-
-    Returns:
-        JSON response indicating success or an error message.
-    """
-    try:
-        data = request.get_json()
-
-        artist = data.get('artist')
-        title = data.get('title')
-        year = data.get('year')
-
-        app.logger.info(f"Moving song to beginning: {artist} - {title} ({year})")
-
-        # Retrieve song by compound key and move it to the beginning
-        song = song_model.get_song_by_compound_key(artist, title, year)
-        playlist_model.move_song_to_beginning(song.id)
-
-        return make_response(jsonify({'status': 'success', 'song': f'{artist} - {title}'}), 200)
-    except Exception as e:
-        app.logger.error(f"Error moving song to beginning: {e}")
-        return make_response(jsonify({'error': str(e)}), 500)
-
-@app.route('/api/move-song-to-end', methods=['POST'])
-def move_song_to_end() -> Response:
-    """
-    Route to move a song to the end of the playlist.
-
-    Expected JSON Input:
-        - artist (str): The artist of the song.
-        - title (str): The title of the song.
-        - year (int): The year the song was released.
-
-    Returns:
-        JSON response indicating success or an error message.
-    """
-    try:
-        data = request.get_json()
-
-        artist = data.get('artist')
-        title = data.get('title')
-        year = data.get('year')
-
-        app.logger.info(f"Moving song to end: {artist} - {title} ({year})")
-
-        # Retrieve song by compound key and move it to the end
-        song = song_model.get_song_by_compound_key(artist, title, year)
-        playlist_model.move_song_to_end(song.id)
-
-        return make_response(jsonify({'status': 'success', 'song': f'{artist} - {title}'}), 200)
-    except Exception as e:
-        app.logger.error(f"Error moving song to end: {e}")
-        return make_response(jsonify({'error': str(e)}), 500)
-
-@app.route('/api/move-song-to-track-number', methods=['POST'])
-def move_song_to_track_number() -> Response:
-    """
-    Route to move a song to a specific track number in the playlist.
-
-    Expected JSON Input:
-        - artist (str): The artist of the song.
-        - title (str): The title of the song.
-        - year (int): The year the song was released.
-        - track_number (int): The new track number to move the song to.
-
-    Returns:
-        JSON response indicating success or an error message.
-    """
-    try:
-        data = request.get_json()
-
-        artist = data.get('artist')
-        title = data.get('title')
-        year = data.get('year')
-        track_number = data.get('track_number')
-
-        app.logger.info(f"Moving song to track number {track_number}: {artist} - {title} ({year})")
-
-        # Retrieve song by compound key and move it to the specified track number
-        song = song_model.get_song_by_compound_key(artist, title, year)
-        playlist_model.move_song_to_track_number(song.id, track_number)
-
-        return make_response(jsonify({'status': 'success', 'song': f'{artist} - {title}', 'track_number': track_number}), 200)
-    except Exception as e:
-        app.logger.error(f"Error moving song to track number: {e}")
-        return make_response(jsonify({'error': str(e)}), 500)
-
-@app.route('/api/swap-songs-in-playlist', methods=['POST'])
-def swap_songs_in_playlist() -> Response:
-    """
-    Route to swap two songs in the playlist by their track numbers.
-
-    Expected JSON Input:
-        - track_number_1 (int): The track number of the first song.
-        - track_number_2 (int): The track number of the second song.
-
-    Returns:
-        JSON response indicating success or an error message.
-    """
-    try:
-        data = request.get_json()
-
-        track_number_1 = data.get('track_number_1')
-        track_number_2 = data.get('track_number_2')
-
-        app.logger.info(f"Swapping songs at track numbers {track_number_1} and {track_number_2}")
-
-        # Retrieve songs by track numbers and swap them
-        song_1 = playlist_model.get_song_by_track_number(track_number_1)
-        song_2 = playlist_model.get_song_by_track_number(track_number_2)
-        playlist_model.swap_songs_in_playlist(song_1.id, song_2.id)
-
-        return make_response(jsonify({
-            'status': 'success',
-            'swapped_songs': {
-                'track_1': {'id': song_1.id, 'artist': song_1.artist, 'title': song_1.title},
-                'track_2': {'id': song_2.id, 'artist': song_2.artist, 'title': song_2.title}
-            }
-        }), 200)
-    except Exception as e:
-        app.logger.error(f"Error swapping songs in playlist: {e}")
-        return make_response(jsonify({'error': str(e)}), 500)
-
-############################################################
-#
-# Leaderboard / Stats
-#
-############################################################
-
-@app.route('/api/song-leaderboard', methods=['GET'])
-def get_song_leaderboard() -> Response:
-    """
-    Route to get a list of all sorted by play count.
-
-    Returns:
-        JSON response with a sorted leaderboard of songs.
-    Raises:
-        500 error if there is an issue generating the leaderboard.
-    """
-    try:
-        app.logger.info("Generating song leaderboard sorted")
-        leaderboard_data = song_model.get_all_songs(sort_by_play_count=True)
-        return make_response(jsonify({'status': 'success', 'leaderboard': leaderboard_data}), 200)
-    except Exception as e:
-        app.logger.error(f"Error generating leaderboard: {e}")
-        return make_response(jsonify({'error': str(e)}), 500)
-
-
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5001)
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            logger.info("Attempting to update play count for song with ID %d", song_id)
+
+            # Check if the song exists and if it's deleted
+            cursor.execute("SELECT deleted FROM songs WHERE id = ?", (song_id,))
+            try:
+                deleted = cursor.fetchone()[0]
+                if deleted:
+                    logger.info("Song with ID %d has been deleted", song_id)
+                    raise ValueError(f"Song with ID {song_id} has been deleted")
+            except TypeError:
+                logger.info("Song with ID %d not found", song_id)
+                raise ValueError(f"Song with ID {song_id} not found")
+
+            # Increment the play count
+            cursor.execute("UPDATE songs SET play_count = play_count + 1 WHERE id = ?", (song_id,))
+            conn.commit()
+
+            logger.info("Play count incremented for song with ID: %d", song_id)
+
+    except sqlite3.Error as e:
+        logger.error("Database error while updating play count for song with ID %d: %s", song_id, str(e))
+        raise e
