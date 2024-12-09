@@ -292,6 +292,15 @@ def trending() -> Response:
         app.logger.error("Error fetching trending recipes: %s", e)
         return make_response(jsonify({'error': str(e)}), 500)
 
+@app.route('/api/save', methods=['POST'])
+def save() -> Response:
+    """
+    Saves recipes to a user's profile
+
+    Returns: JSON response indicating the success of saving the recipe
+    """
+    
+
 
 # -------------------------------------------------------------------------------------
 # Below code is for reference from song management. 
