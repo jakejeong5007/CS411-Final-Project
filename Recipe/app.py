@@ -316,7 +316,10 @@ def save() -> Response:
     if not user_id or recipe_id:
         return make_response(jsonify({'error': 'Invalid input, all fields are required with valid values'}), 400)
 
-    
+    app.logger.info('Saving recipe: %s - %s', user_id, receipe_id)
+        recipe_model.save(userId = user_id, recipeId = recipe_id)
+        app.logger.info("Song saved to account: %s - %s", user_id, recipe_id)
+        return make_response(jsonify({'status': 'success', 'receipe': recipe_id}), 201)
 
     except Exception as e:
         app.logger.error("Failed to add recipe: %s", str(e))
