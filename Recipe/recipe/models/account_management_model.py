@@ -3,8 +3,8 @@ import os
 import sqlite3
 import hashlib
 
-from music_collection.utils.logger import configure_logger
-from music_collection.utils.sql_utils import get_db_connection
+from recipe.utils.logger import configure_logger
+from recipe.utils.sql_utils import get_db_connection
 
 
 logger = logging.getLogger(__name__)

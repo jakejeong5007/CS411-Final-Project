@@ -1,10 +1,11 @@
 from dotenv import load_dotenv
 from flask import Flask, jsonify, make_response, Response, request
 
-from Recipe.music_collection.models import recipe_account_model, recipe_model
-from music_collection.models import song_model
-from music_collection.models.playlist_model import PlaylistModel
-from music_collection.utils.sql_utils import check_database_connection, check_table_exists
+from recipe.models import account_management_model
+
+from recipe.music_collection.models import recipe_account_model, recipe_model
+from recipe.models.playlist_model import PlaylistModel
+from recipe.utils.sql_utils import check_database_connection, check_table_exists
 
 # Load environment variables from .env file
 load_dotenv()
@@ -85,9 +86,9 @@ def login() -> Response:
             return make_response(jsonify({'error': 'Invalid input, all fields are required with valid values'}), 400)
 
         app.logger.info('Validating given password for: %s', user_name)
-        # Insert function to check the given password with the password in db
+        login_res = account_management_model.login(user_name, user_password)
         app.logger.info('Password check completed for: %s', user_name)
-        return make_response(jsonify({'status': 'success', 'user_name': user_name}), 201)
+        return make_response(jsonify({'status': 'success', 'user_name': user_name, 'login_status': login_res}), 201)
     except Exception as e:
         app.logger.error('Failed to check password')
         return make_response(jsonify({'error': str(e)}), 500)
@@ -119,7 +120,7 @@ def create_account() -> Response:
             return make_response(jsonify({'error': 'Invalid input, all fields are required with valid values'}), 400)
 
         app.logger.info('Creating account')
-        # Some function to create account
+        account_management_model.create_account(user_name, user_password)
         app.logger.info('Account created')
         return make_response(jsonify({'status': 'success', 'user_name': user_name}), 201)
     except Exception as e:
@@ -134,7 +135,8 @@ def update_password() -> Response:
 
     Expected JSON Input:
         - user_name (str): The user name for account
-        - user_password (str): The password the user wants to update to
+        - current_user_password (str): The current user password
+        - new_user_password (str): The password the user wants to update to
 
     Returns:
         JSON reponse indicating the success of creating the accoutn
@@ -148,13 +150,14 @@ def update_password() -> Response:
         data = request.get_json()
 
         user_name = data.get('user_name')
-        user_password = data.get('user_password')
+        current_user_password = data.get('current_user_password')
+        new_user_password = data.get('new_user_password')
 
-        if not user_name or not user_password:
+        if not user_name or not current_user_password or not new_user_password:
             return make_response(jsonify({'error': 'Invalid input, all fields are required with valid values'}), 400)
 
         app.logger.info('Updating password')
-        # Some function to update password
+        account_management_model.change_password(user_name, current_user_password, new_user_password)
         app.logger.info('Password updated')
         return make_response(jsonify({'status': 'success', 'user_name': user_name}), 201)
     except Exception as e:
