@@ -3,6 +3,8 @@ import logging
 import os
 import sqlite3
 
+from recipe.utils.recipe_api_utils import fetch_recipes_from_api
+
 from recipe.utils.logger import configure_logger
 from recipe.utils.random_utils import get_random
 from recipe.utils.sql_utils import get_db_connection
@@ -26,6 +28,24 @@ class Recipe:
         if self.year <= 1900:
             raise ValueError(f"Year must be greater than 1900, got {self.year}")
 
+def serach_recipes(ingredients, diet=None, calories=None) -> Recipe:
+    """
+    Searches for recipe that satisfies the three parameters.
+    
+    Args:
+        ingredients (str): Ingredients that must me included in the meal
+        diet (str): Dietary restriction
+        calories (str): The range of calories
+    
+    Returns:
+        list: A list of recipes matching the search criteria.        
+    """
+    try:
+        recipes = fetch_recipes_from_api(ingredients, diet, calories)
+        return recipes
+    except Exception as e:
+        logger.error(f'Fails during API call: {e}')
+        return []
 
 def create_song(artist: str, title: str, year: int, genre: str, duration: int) -> None:
     """

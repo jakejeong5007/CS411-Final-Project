@@ -6,6 +6,9 @@ from recipe.utils.logger import configure_logger
 logger = logging.getLogger(__name__)
 configure_logger(logger)
 
+app_id = "APP_ID"
+app_key = "APP_KEY"
+
 
 def get_random(num_songs: int) -> int:
     """
@@ -62,3 +65,48 @@ def get_recipes(query, app_id, app_key, calories=None):
         return response.json()
     else:
         response.raise_for_status()
+        
+def fetch_recipes_from_api(ingredients, diet=None, calories=None):
+    """
+    Calls the Edamam API to search for recipes based on the provided parameters.
+
+    Args:
+        ingredients (str): Ingredients that must be included in the meal.
+        diet (str, optional): Dietary restriction.
+        calories (str, optional): The range of calories.
+
+    Returns:
+        list: A list of matching recipes with details.
+    """
+
+    base_url = "https://api.edamam.com/api/recipes/v2"
+
+    params = {
+        "type": "public",
+        "q": ingredients,
+        "app_id": app_id,
+        "app_key": app_key,
+    }
+
+    if diet:
+        params["diet"] = diet
+    if calories:
+        params["calories"] = calories
+
+    response = requests.get(base_url, params=params)
+    response.raise_for_status()  # Raise an error for bad HTTP responses
+
+    data = response.json()
+    recipes = []
+
+    for hit in data.get("hits", []):
+        recipe = hit.get("recipe", {})
+        recipes.append({
+            "label": recipe.get("label"),
+            "url": recipe.get("url"),
+            "ingredients": recipe.get("ingredientLines"),
+            "calories": recipe.get("calories"),
+            "diet_labels": recipe.get("dietLabels"),
+        })
+
+    return recipes
