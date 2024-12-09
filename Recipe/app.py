@@ -290,8 +290,25 @@ def preferences() -> Response:
     Returns: 
         JSON response with user recipe preferences
     """
+    app.logger.info("Updating user preferences")
+    try:
+        data = request.get_json()
 
-    
+        user_id = data.get('userId')
+        preferences = data.get('preferences')
+
+    if not user_id or isinstance(preferences, dict):
+        return make_response(jsonify({'error': 'Invalid input, userId and preferences required'}), 400)
+
+    app.logger.info('Updating preferences for user: %s', user_id)
+    recipe_account_model.update_preferences(user_id = user_id, preferences = preferences)
+
+    app.logger.info("Preferences updated for user: %s", user_id)
+    return make_response(jsonify({'status': 'success', 'preferences': preferences}), 200)
+
+     except Exception as e:
+        app.logger.error("Failed to update preferences: %s", str(e))
+        return make_response(jsonify({'error': str(e)}), 500)
 
 
 # -------------------------------------------------------------------------------------
