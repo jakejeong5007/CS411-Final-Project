@@ -6,11 +6,12 @@ preferences -> sets selected recipes to prefered recipe for specific user
 get_preferences -> gets current preference
 """
 
-def saveRecipe(user_name, recipe_id):
-  data = {
-    "userName": user_name,
-    "recipeId": recipe_id
-  }
-  response = requests.post("/save", json = data)
-  if response.status_code == 200:
+class RecipeAccountModel:
+  """
+    A class to manage the functionalities of a user's account
+
+    Attributes:
+      user_id (str)
+  
+  """
     
