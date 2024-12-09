@@ -170,31 +170,37 @@ def update_password() -> Response:
 @app.route('/api/search', methods=['GET'])
 def search() -> Response:
     """
-    Route to search for a recipe with given describtion
-    
-    Expected JSON Input:
-        - some field
-        
+    Route to search for recipes by ingredients.
+
+    Query Parameters:
+        - ingredients (str): Comma-separated list of ingredients (required).
+        - diet (str, optional): Dietary restriction (e.g., vegan, keto).
+        - calories (str, optional): Calorie range (e.g., 200-400).
+
     Returns:
-        JSON response indicating the success of retrieving the recipe
-    Raises:
-        400 error if input validation fails
-        500 error if there is an issue retrieving the recipe
+        JSON response with search results or an error message.
     """
-    app.logger.info('Retrieving the recipe')
     try:
-        data = request.get_json()
-        
-        # Need to add after details in input for the method
-    
-        
+        ingredients = request.args.get('ingredients')
+        diet = request.args.get('diet')
+        calories = request.args.get('calories')
+
+        if not ingredients:
+            return make_response(jsonify({'error': 'Ingredients parameter is required'}), 400)
+
+        app.logger.info("Searching recipes with ingredients: %s, diet: %s, calories: %s", ingredients, diet, calories)
+
+        # Fetch recipes using the utility function
+        recipes = recipe_model.search_recipes(ingredients=ingredients, diet=diet, calories=calories)
+        return make_response(jsonify({'status': 'success', 'recipes': recipes}), 200)
     except Exception as e:
-        app.logger.error("Failed to retrieve recipe")
+        app.logger.error("Error searching for recipes: %s", str(e))
         return make_response(jsonify({'error': str(e)}), 500)
+
 @app.route('/api/recommend', methods=['GET'])
 def recommend() -> Response:
     """
-    Recommend personalized recipes based on user preferences.
+    Route to get personalized recipe recommendations.
 
     Query Parameters:
         - userId (str): User ID (required).
@@ -208,89 +214,39 @@ def recommend() -> Response:
         cuisine = request.args.get('cuisine')
 
         if not user_id:
-            return make_response(jsonify({'error': 'User ID is required'}), 400)
+            return make_response(jsonify({'error': 'User ID parameter is required'}), 400)
 
-        app.logger.info("Fetching preferences for user ID: %s", user_id)
+        app.logger.info("Fetching recommendations for userId: %s, cuisine: %s", user_id, cuisine)
 
-        # Fetch user preferences from the database
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT preferences FROM users WHERE id = ?", (user_id,))
-            preferences_row = cursor.fetchone()
-
-        if not preferences_row:
+        # Fetch user preferences and recommend recipes
+        preferences = recipe_account_model.get_user_preferences(user_id)
+        if not preferences:
             return make_response(jsonify({'error': 'User preferences not found'}), 404)
 
-        preferences = preferences_row[0]  # Assumes JSON string or dictionary
-        preferred_ingredients = preferences.get("preferred_ingredients", "")
-        calorie_range = preferences.get("calories", None)
-
-        # Fetch recipes using preferred ingredients
-        app_id = "your_edamam_app_id"
-        app_key = "your_edamam_app_key"
-        recipes = get_recipes(query=preferred_ingredients, app_id=app_id, app_key=app_key, calories=calorie_range)
-
-        # Filter by cuisine type if provided
-        if cuisine:
-            recipes = [r for r in recipes.get("hits", []) if cuisine.lower() in r["recipe"].get("cuisineType", [])]
-
+        recipes = recipe_model.recommend_recipes(preferences, cuisine=cuisine)
         return make_response(jsonify({'status': 'success', 'recipes': recipes}), 200)
-
     except Exception as e:
-        app.logger.error("Error recommending recipes: %s", e)
+        app.logger.error("Error recommending recipes: %s", str(e))
         return make_response(jsonify({'error': str(e)}), 500)
 
 @app.route('/api/trending', methods=['GET'])
 def trending() -> Response:
     """
-    Fetch trending recipes sorted by popularity.
+    Route to view trending recipes.
 
     Returns:
         JSON response with trending recipes or an error message.
     """
     try:
-        app.logger.info("Fetching trending recipes from the database")
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                SELECT id, title, genre, duration, play_count
-                FROM recipes
-                WHERE deleted = FALSE
-                ORDER BY play_count DESC
-                LIMIT 10
-            """)
-            trending_recipes = cursor.fetchall()
-
-        if not trending_recipes:
-            app.logger.info("No trending recipes in database, fetching from Edamam API")
-            # Fetch from Edamam API if no trending recipes are cached
-            app_id = "your_edamam_app_id"
-            app_key = "your_edamam_app_key"
-            recipes = get_recipes(query="popular", app_id=app_id, app_key=app_key)
-
-            # Save to database for future use
-            with get_db_connection() as conn:
-                cursor = conn.cursor()
-                for recipe in recipes.get("hits", []):
-                    cursor.execute("""
-                        INSERT INTO recipes (title, genre, duration, play_count, deleted)
-                        VALUES (?, ?, ?, ?, ?)
-                    """, (
-                        recipe["recipe"]["label"],
-                        ",".join(recipe["recipe"].get("cuisineType", [])),
-                        recipe["recipe"].get("totalTime", 0),
-                        0,  # Initial play count
-                        False
-                    ))
-                conn.commit()
-
-            trending_recipes = recipes.get("hits", [])
-
+        app.logger.info("Fetching trending recipes")
+        
+        # Fetch trending recipes from the model
+        trending_recipes = recipe_model.get_trending_recipes()
         return make_response(jsonify({'status': 'success', 'recipes': trending_recipes}), 200)
-
     except Exception as e:
-        app.logger.error("Error fetching trending recipes: %s", e)
+        app.logger.error("Error fetching trending recipes: %s", str(e))
         return make_response(jsonify({'error': str(e)}), 500)
+
 
 @app.route('/api/saveRecipe', methods=['POST'])
 def save() -> Response:
