@@ -297,8 +297,31 @@ def save() -> Response:
     """
     Saves recipes to a user's profile
 
+    Expected JSON Input:
+        userId (str): The user's ID
+        recipeId (str): The recipe's ID
+
     Returns: JSON response indicating the success of saving the recipe
+    Raises:
+        400 error if input validation fails.
+        500 error if there is an issue adding the song to the playlist.
     """
+    app.logger.info('Saving a recipe to the user profile')
+    try:
+        data = request.get_json()
+
+        user_id = data.get('userId')
+        recipe_id = data.get('recipeId')
+
+    if not user_id or recipe_id:
+        return make_response(jsonify({'error': 'Invalid input, all fields are required with valid values'}), 400)
+
+    
+
+    except Exception as e:
+        app.logger.error("Failed to add recipe: %s", str(e))
+        return make_response(jsonify({'error': str(e)}), 500)
+
     
 
 
