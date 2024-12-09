@@ -292,7 +292,7 @@ def trending() -> Response:
         app.logger.error("Error fetching trending recipes: %s", e)
         return make_response(jsonify({'error': str(e)}), 500)
 
-@app.route('/api/save', methods=['POST'])
+@app.route('/api/saveRecipe', methods=['POST'])
 def save() -> Response:
     """
     Saves recipes to a user's profile
@@ -301,7 +301,8 @@ def save() -> Response:
         userId (str): The user's ID
         recipeId (str): The recipe's ID
 
-    Returns: JSON response indicating the success of saving the recipe
+    Returns: 
+        JSON response indicating the success of saving the recipe
     Raises:
         400 error if input validation fails.
         500 error if there is an issue adding the song to the playlist.
@@ -324,6 +325,15 @@ def save() -> Response:
     except Exception as e:
         app.logger.error("Failed to add recipe: %s", str(e))
         return make_response(jsonify({'error': str(e)}), 500)
+
+@app.route('/api/', methods=['PUT'])
+def preferences() -> Response:
+    """
+    Gets the users recipe preferences
+
+    Returns: 
+        JSON response with user recipe preferences
+    """
 
     
 
