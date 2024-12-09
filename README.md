@@ -22,294 +22,455 @@ Key Features:
 
 ## API Documentation
 
-### **1. `/search`**
+### 1\. `/search`
 
-- **Path**: `/api/search`
+-   **Route Name**: Search Recipes
+-   **Path**: `/api/search`
+-   **Request Type**: `GET`
+-   **Purpose**: Search for recipes based on a list of ingredients and optional filters such as dietary restrictions and calorie limits.
 
-- **Request Type**: `GET`
+#### Request Format
 
-- **Purpose**: Search for recipes based on ingredients and optional filters like dietary restrictions and calorie limits.
+-   **GET Parameters**:
 
-- **Request Format**:
+    | Parameter | Type | Required | Description |
+    | --- | --- | --- | --- |
+    | `ingredients` | string | Yes | Comma-separated list of ingredients (e.g., `chicken,tomato`). |
+    | `diet` | string | No | Dietary restriction (e.g., `vegan`, `keto`). |
+    | `calories` | string | No | Calorie range (e.g., `200-400`). |
 
-  - **GET Parameters**:
+#### Response Format
 
-    - `ingredients` (string, required): Comma-separated list of ingredients (e.g., `chicken,tomato`).
+-   **JSON Keys and Value Types**:
 
-    - `diet` (string, optional): Dietary restriction (e.g., `vegan`, `keto`).
+    | Key | Type | Description |
+    | --- | --- | --- |
+    | `status` | string | Status of the response (e.g., `success`). |
+    | `recipes` | array | List of recipe objects. |
 
-    - `calories` (string, optional): Calorie range (e.g., `200-400`).
+-   **Recipe Object Structure**:
 
-- **Response Format**:
+    | Key | Type | Description |
+    | --- | --- | --- |
+    | `title` | string | Title of the recipe. |
+    | `ingredients` | array | List of ingredients required. |
+    | `calories` | integer | Calorie count of the recipe. |
+    | `instructions` | string | Step-by-step preparation instructions. |
 
-  {
+#### Example
 
-    "status": "success",
+**Request via cURL**:
 
-    "recipes": [
+```
+curl -X GET "http://localhost:5000/api/search?ingredients=chicken,tomato&diet=keto&calories=200-400"
 
-      {
+```
 
-        "title": "Grilled Chicken Salad",
+**Request via JSON**:
 
-        "ingredients": ["chicken", "lettuce", "tomato"],
+*Note: Although `GET` requests typically use URL parameters, some tools allow sending a JSON body.*
 
-        "calories": 350,
+```
+{
+  "ingredients": "chicken,tomato",
+  "diet": "keto",
+  "calories": "200-400"
+}
 
-        "instructions": "Mix ingredients and grill chicken."
+```
 
-      }
+**Associated JSON Response**:
 
-    ]
+```
+{
+  "status": "success",
+  "recipes": [
+    {
+      "title": "Grilled Chicken Salad",
+      "ingredients": ["chicken", "lettuce", "tomato"],
+      "calories": 350,
+      "instructions": "Mix ingredients and grill chicken."
+    }
+  ]
+}
 
-  }
+```
 
-  ```
+* * * * *
 
-- **Example**:
+### 2\. `/recommend`
 
-  curl -X GET "http://localhost:5000/api/search?ingredients=chicken,tomato&diet=keto&calories=200-400"
+-   **Route Name**: Recommend Recipes
+-   **Path**: `/api/recommend`
+-   **Request Type**: `GET`
+-   **Purpose**: Provide personalized recipe recommendations based on user preferences and an optional cuisine type.
 
----
+#### Request Format
 
-### **2. `/recommend`**
+-   **GET Parameters**:
 
-- **Path**: `/api/recommend`
+    | Parameter | Type | Required | Description |
+    | --- | --- | --- | --- |
+    | `userId` | string | Yes | Unique ID of the user. |
+    | `cuisine` | string | No | Preferred cuisine type (e.g., `Indian`, `Italian`). |
 
-- **Request Type**: `GET`
+#### Response Format
 
-- **Purpose**: Provide personalized recipe recommendations based on user preferences and optional cuisine type.
+-   **JSON Keys and Value Types**:
 
-- **Request Format**:
+    | Key | Type | Description |
+    | --- | --- | --- |
+    | `status` | string | Status of the response (e.g., `success`). |
+    | `recipes` | array | List of recommended recipe objects. |
 
-  - **GET Parameters**:
+-   **Recipe Object Structure**:
 
-    - `userId` (string, required): Unique ID of the user.
+    | Key | Type | Description |
+    | --- | --- | --- |
+    | `title` | string | Title of the recipe. |
+    | `cuisine` | string | Cuisine type of the recipe (e.g., `Indian`). |
+    | `calories` | integer | Calorie count of the recipe. |
+    | `ingredients` | array | List of ingredients required. |
 
-    - `cuisine` (string, optional): Preferred cuisine type (e.g., `Indian`, `Italian`).
+#### Example
 
-- **Response Format**:
+**Request via cURL**:
 
-  {
+```
+curl -X GET "http://localhost:5000/api/recommend?userId=123&cuisine=Indian"
 
-    "status": "success",
+```
 
-    "recipes": [
+**Request via JSON**:
 
-      {
+*Note: Although `GET` requests typically use URL parameters, some tools allow sending a JSON body.*
 
-        "title": "Chicken Biryani",
+```
+{
+  "userId": "123",
+  "cuisine": "Indian"
+}
 
-        "cuisine": "Indian",
+```
 
-        "calories": 450,
+**Associated JSON Response**:
 
-        "ingredients": ["chicken", "rice", "spices"]
+```
+{
+  "status": "success",
+  "recipes": [
+    {
+      "title": "Chicken Biryani",
+      "cuisine": "Indian",
+      "calories": 450,
+      "ingredients": ["chicken", "rice", "spices"]
+    }
+  ]
+}
 
-      }
+```
 
-    ]
+* * * * *
 
-  }
+### 3\. `/trending`
 
-  ```
+-   **Route Name**: Trending Recipes
+-   **Path**: `/api/trending`
+-   **Request Type**: `GET`
+-   **Purpose**: Display trending recipes based on popularity.
 
-- **Example**:
+#### Request Format
 
-  curl -X GET "http://localhost:5000/api/recommend?userId=123&cuisine=Indian"
+-   **No parameters required.**
 
----
+#### Response Format
 
-### **3. `/trending`**
+-   **JSON Keys and Value Types**:
 
-- **Path**: `/api/trending`
+    | Key | Type | Description |
+    | --- | --- | --- |
+    | `status` | string | Status of the response (e.g., `success`). |
+    | `recipes` | array | List of trending recipe objects. |
 
-- **Request Type**: `GET`
+-   **Recipe Object Structure**:
 
-- **Purpose**: Display trending recipes based on popularity.
+    | Key | Type | Description |
+    | --- | --- | --- |
+    | `title` | string | Title of the recipe. |
+    | `popularity` | integer | Popularity score of the recipe. |
+    | `ingredients` | array | List of ingredients required. |
 
-- **Request Format**:
+#### Example
 
-  - No parameters required.
+**Request via cURL**:
 
-- **Response Format**:
+```
+curl -X GET "http://localhost:5000/api/trending"
 
-  {
+```
 
-    "status": "success",
+**Request via JSON**:
 
-    "recipes": [
+*No JSON body is required for this `GET` request.*
 
-      {
+**Associated JSON Response**:
 
-        "title": "Avocado Toast",
+```
+{
+  "status": "success",
+  "recipes": [
+    {
+      "title": "Avocado Toast",
+      "popularity": 95,
+      "ingredients": ["avocado", "bread"]
+    }
+  ]
+}
 
-        "popularity": 95,
+```
 
-        "ingredients": ["avocado", "bread"]
+* * * * *
 
-      }
+### 4\. `/save`
 
-    ]
+-   **Route Name**: Save Recipe
+-   **Path**: `/api/save`
+-   **Request Type**: `POST`
+-   **Purpose**: Save a recipe to the user's profile for future access.
 
-  }
+#### Request Format
 
-- **Example**:
+-   **POST Body**:
 
-  curl -X GET "http://localhost:5000/api/trending"
+    | Key | Type | Description |
+    | --- | --- | --- |
+    | `userId` | string | Unique ID of the user. |
+    | `recipeId` | string | Unique ID of the recipe to save. |
 
----
+    ```
+    {
+      "userId": "123",
+      "recipeId": "456"
+    }
 
-### **4. `/save`**
+    ```
 
-- **Path**: `/api/save`
+#### Response Format
 
-- **Request Type**: `POST`
+-   **JSON Keys and Value Types**:
 
-- **Purpose**: Save a recipe to the user's profile for future access.
+    | Key | Type | Description |
+    | --- | --- | --- |
+    | `status` | string | Status of the response (e.g., `success`). |
+    | `message` | string | Confirmation message. |
 
-- **Request Format**:
+-   **Response Body in Grid Format**:
 
-  - **POST Body**:
+    | status | message |
+    | --- | --- |
+    | success | Recipe saved successfully. |
 
-    {
+#### Example
 
-      "userId": "123",
+**Request via cURL**:
 
-      "recipeId": "456"
+```
+curl -X POST "http://localhost:5000/api/save"\
+  -H "Content-Type: application/json"\
+  -d '{
+        "userId": "123",
+        "recipeId": "456"
+      }'
 
-    }
+```
 
-    ```
+**Request via JSON**:
 
-- **Response Format**:
+```
+{
+  "userId": "123",
+  "recipeId": "456"
+}
 
-  {
+```
 
-    "status": "success",
+**Associated JSON Response**:
 
-    "message": "Recipe saved successfully."
+```
+{
+  "status": "success",
+  "message": "Recipe saved successfully."
+}
 
-  }
+```
 
-  ```
+* * * * *
 
-- **Example**:
+### 5\. `/preferences`
 
-  curl -X POST "http://localhost:5000/api/save"
+-   **Route Name**: Update Preferences
+-   **Path**: `/api/preferences`
+-   **Request Type**: `PUT`
+-   **Purpose**: Update user dietary preferences, including favorite cuisines and calorie limits.
 
-  -H "Content-Type: application/json"
+#### Request Format
 
-  -d '{
+-   **PUT Body**:
 
-        "userId": "123",
+    | Key | Type | Description |
+    | --- | --- | --- |
+    | `userId` | string | Unique ID of the user. |
+    | `preferences` | object | Object containing user preferences. |
 
-        "recipeId": "456"
+    **Preferences Object Structure**:
 
-      }'
+    | Key | Type | Description |
+    | --- | --- | --- |
+    | `diet` | string | Dietary preference (e.g., `vegan`). |
+    | `calories` | string | Daily calorie limit (e.g., `1500`). |
+    | `favoriteCuisines` | array | List of favorite cuisines (optional). |
 
-  ```
+    ```
+    {
+      "userId": "123",
+      "preferences": {
+        "diet": "vegan",
+        "calories": "1500",
+        "favoriteCuisines": ["Italian", "Mexican"]
+      }
+    }
 
----
+    ```
 
-### **5. `/preferences`**
+#### Response Format
 
-- **Path**: `/api/preferences`
+-   **JSON Keys and Value Types**:
 
-- **Request Type**: `PUT`
+    | Key | Type | Description |
+    | --- | --- | --- |
+    | `status` | string | Status of the response (e.g., `success`). |
+    | `message` | string | Confirmation message. |
 
-- **Purpose**: Update user dietary preferences, including favorite cuisines and calorie limits.
+-   **Response Body in Grid Format**:
 
-- **Request Format**:
+    | status | message |
+    | --- | --- |
+    | success | Preferences updated successfully. |
 
-  - **PUT Body**:
+#### Example
 
-    {
+**Request via cURL**:
 
-      "userId": "123",
+```
+curl -X PUT "http://localhost:5000/api/preferences"\
+  -H "Content-Type: application/json"\
+  -d '{
+        "userId": "123",
+        "preferences": {
+          "diet": "vegan",
+          "calories": "1500",
+          "favoriteCuisines": ["Italian", "Mexican"]
+        }
+      }'
 
-      "preferences": {
+```
 
-        "diet": "vegan",
+**Request via JSON**:
 
-        "calories": "1500"
+```
+{
+  "userId": "123",
+  "preferences": {
+    "diet": "vegan",
+    "calories": "1500",
+    "favoriteCuisines": ["Italian", "Mexican"]
+  }
+}
 
-      }
+```
 
-    }
+**Associated JSON Response**:
 
-    ```
+```
+{
+  "status": "success",
+  "message": "Preferences updated successfully."
+}
 
-- **Response Format**:
+```
 
-  {
+* * * * *
 
-    "status": "success",
+### 6\. `/get-preferences`
 
-    "message": "Preferences updated successfully."
+-   **Route Name**: Get Preferences
+-   **Path**: `/api/get-preferences`
+-   **Request Type**: `GET`
+-   **Purpose**: Retrieve user dietary preferences.
 
-  }
+#### Request Format
 
-  ```
+-   **GET Parameters**:
 
-- **Example**:
+    | Parameter | Type | Required | Description |
+    | --- | --- | --- | --- |
+    | `userId` | string | Yes | Unique ID of the user. |
 
-  curl -X PUT "http://localhost:5000/api/preferences"
+#### Response Format
 
-  -H "Content-Type: application/json"
+-   **JSON Keys and Value Types**:
 
-  -d '{
+    | Key | Type | Description |
+    | --- | --- | --- |
+    | `status` | string | Status of the response (e.g., `success`). |
+    | `preferences` | object | Object containing user preferences. |
 
-        "userId": "123",
+-   **Preferences Object Structure**:
 
-        "preferences": {
+    | Key | Type | Description |
+    | --- | --- | --- |
+    | `diet` | string | Dietary preference (e.g., `vegan`). |
+    | `calories` | string | Daily calorie limit (e.g., `1500`). |
+    | `favoriteCuisines` | array | List of favorite cuisines (e.g., `["Indian", "Mexican"]`). |
 
-          "diet": "vegan",
+-   **Response Body in Grid Format**:
 
-          "calories": "1500"
+    | status | preferences |
+    | --- | --- |
+    | success | {"diet": "vegan", "calories": "1500", "favoriteCuisines": ["Indian", "Mexican"]} |
 
-        }
+#### Example
 
-      }'
+**Request via cURL**:
 
-  ```
+```
+curl -X GET "http://localhost:5000/api/get-preferences?userId=123"
 
----
+```
 
-### **6. `/get-preferences`**
+**Request via JSON**:
 
-- **Path**: `/api/get-preferences`
+*Note: Although `GET` requests typically use URL parameters, some tools allow sending a JSON body.*
 
-- **Request Type**: `GET`
+```
+{
+  "userId": "123"
+}
 
-- **Purpose**: Retrieve user dietary preferences.
+```
 
-- **Request Format**:
+**Associated JSON Response**:
 
-  - **GET Parameters**:
+```
+{
+  "status": "success",
+  "preferences": {
+    "diet": "vegan",
+    "calories": "1500",
+    "favoriteCuisines": ["Indian", "Mexican"]
+  }
+}
 
-    - `userId` (string, required): Unique ID of the user.
+```
 
-- **Response Format**:
-
-  {
-
-    "status": "success",
-
-    "preferences": {
-
-      "diet": "vegan",
-
-      "calories": "1500",
-
-      "favoriteCuisines": ["Indian", "Mexican"]
-
-    }
-
-  }
-
-  ```
-
-- **Example**:
-
-  curl -X GET "http://localhost:5000/api/get-preferences?userId=123"
+* * * * *
