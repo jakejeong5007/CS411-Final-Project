@@ -4,7 +4,6 @@ import requests
 from typing import List
 
 from recipe.utils.logger import configure_logger
-from recipe.models.recipe_model import Recipe
 
 logger = logging.getLogger(__name__)
 configure_logger(logger)
@@ -14,7 +13,7 @@ app_key = "APP_KEY"
 base_url = "https://api.edamam.com/api/recipes/v2"
 
 
-def fetch_recipes_from_api(ingredients, diet=None, calories=None, cuisine=None) -> List[Recipe]:
+def fetch_recipes_from_api(ingredients, diet=None, calories=None, cuisine=None):
     """
     Calls the Edamam API to search for recipes based on the provided parameters.
 
@@ -26,7 +25,7 @@ def fetch_recipes_from_api(ingredients, diet=None, calories=None, cuisine=None) 
     Returns:
         list: A list of matching recipes with details.
     """
-
+    from recipe.models.recipe_model import Recipe
     params = {
         "type": "public",
         "q": ingredients,
@@ -58,14 +57,14 @@ def fetch_recipes_from_api(ingredients, diet=None, calories=None, cuisine=None) 
 
     return recipes
 
-def fetch_trending_recipes() -> List[Recipe]:
+def fetch_trending_recipes():
     """
     Fetches trending recipes from the Edamam API.
 
     Returns:
         List[Recipe]: A list of trending Recipe objects.
     """
-
+    from recipe.models.recipe_model import Recipe
     # Example criteria for trending recipes (e.g., popular dishes like "pizza", "pasta", etc.)
     trending_keywords = ["pizza", "pasta", "burger", "salad", "chocolate"]
     recipes = []
