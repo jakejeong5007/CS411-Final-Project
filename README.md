@@ -270,13 +270,6 @@ Key Features:
     | --- | --- | --- |
     | `preferences` | object | Object containing user preferences. |
 
-    **Preferences Object Structure**:
-
-    | Key | Type | Description |
-    | --- | --- | --- |
-    | `diet` | string | Dietary preference (e.g., `vegan`). |
-    | `calories` | string | Daily calorie limit (e.g., `1500`). |
-    | `ingredient` | String | Ingredient preference (e.g., 'rice'). |
 
     ```
     {
@@ -351,14 +344,6 @@ Key Features:
     | `status` | string | Status of the response (e.g., `success`). |
     | `preferences` | object | Object containing user preferences. |
 
--   **Preferences Object Structure**:
-
-    | Key | Type | Description |
-    | --- | --- | --- |
-    | `diet` | string | Dietary preference (e.g., `vegan`). |
-    | `calories` | string | Daily calorie limit (e.g., `1500`). |
-    | `ingredient` | String | Ingredient preference (e.g., 'rice'). |
-
 -   **Response Body in Grid Format**:
 
     | status | preferences |
@@ -385,3 +370,187 @@ Key Features:
 ```
 
 * * * * *
+
+### 7\. `/login`
+
+- **Route Name**: User Login
+- **Path**: `/api/login`
+- **Request Type**: `POST`
+- **Purpose**: Authenticate a user with a username and password.
+
+#### Request Format
+- **Request Body**:
+
+    | Parameter       | Type   | Required | Description                           |
+    |-----------------|--------|----------|---------------------------------------|
+    | `user_name`     | string | Yes      | The username for the account.         |
+    | `user_password` | string | Yes      | The password for the account.         |
+
+#### Response Format
+
+- **JSON Keys and Value Types**:
+
+    | Key             | Type    | Description                                 |
+    |-----------------|---------|---------------------------------------------|
+    | `status`        | string  | Status of the response (e.g., `success`).   |
+    | `user_name`     | string  | The username of the logged-in user.         |
+    | `login_status`  | boolean | Whether the login was successful or not.    |
+
+- **Success Response Example**:
+    - Code: 201
+    - Content:
+  ```
+  {
+    "status": "success",
+    "user_name": "example_user",
+    "login_status": true
+  }
+  ```
+
+#### Example
+
+- **Example Request:**
+```
+{
+  "user_name": { "test" },
+  "user_password": { "1234" }
+}
+
+```
+
+**Associated JSON Response**:
+
+  ```
+  {
+    "status": "success",
+    "user_name": "test",
+    "login_status": true
+  }
+  ```
+
+* * * * *
+
+
+### 8\. `/create-account`
+
+-   **Route Name**: Create account
+-   **Path**: `/api/create-account`
+-   **Request Type**: `POST`
+-   **Purpose**: Creates a new account with given user name and password.
+
+#### Request Format
+- **Request Body**:
+
+    | Parameter       | Type   | Required | Description                           |
+    |-----------------|--------|----------|---------------------------------------|
+    | `user_name`     | string | Yes      | The username for the account.         |
+    | `user_password` | string | Yes      | The password for the account.         |
+
+
+#### Response Format
+
+- **JSON Keys and Value Types**:
+
+    | Key             | Type    | Description                                 |
+    |-----------------|---------|---------------------------------------------|
+    | `status`        | string  | Status of the response (e.g., `success`).   |
+    | `user_name`     | string  | The username of the logged-in user.         |
+
+#### Example
+
+- **Success Response Example**:
+    - Code: 201
+    - Content:
+  ```
+  {
+    "status": "success",
+    "user_name": "example_user",
+    "login_status": true
+  }
+  ```
+
+#### Example
+
+- **Example Request:**
+```
+{
+  "user_name": { "test" },
+  "user_password": { "1234" }
+}
+
+```
+
+**Associated JSON Response**:
+
+  ```
+  {
+    "status": "success",
+    "user_name": "test",
+  }
+  ```
+
+* * * * *
+
+### 9\. `/update-password`
+
+-   **Route Name**: Update password
+-   **Path**: `/api/update-password`
+-   **Request Type**: `PATCH`
+-   **Purpose**: Updates user password.
+
+#### Request Format
+- **Request Body**:
+
+    | Parameter       | Type   | Required | Description                           |
+    |-----------------|--------|----------|---------------------------------------|
+    | `user_name`     | string | Yes      | The username for the account.         |
+    | `current_user_password` | string | Yes      | The current password for the account.         |
+    | `new_user_password` | string | Yes      | The new password for the account.         |
+
+
+#### Response Format
+
+- **JSON Keys and Value Types**:
+
+    | Key             | Type    | Description                                 |
+    |-----------------|---------|---------------------------------------------|
+    | `status`        | string  | Status of the response (e.g., `success`).   |
+    | `user_name`     | string  | The username of the logged-in user.         |
+
+#### Example
+
+- **Success Response Example**:
+    - Code: 201
+    - Content:
+  ```
+  {
+    "status": "success",
+    "user_name": "example_user",
+    "login_status": true
+  }
+  ```
+
+#### Example
+
+- **Example Request:**
+```
+{
+  "user_name": { "test" },
+  "current_user_password": { "1234" },
+  "new_user_password": { "4321" }
+}
+
+```
+
+**Associated JSON Response**:
+
+  ```
+  {
+    "status": "success",
+    "user_name": "test",
+  }
+  ```
+
+* * * * *
+
+
