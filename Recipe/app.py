@@ -290,6 +290,7 @@ def preferences() -> Response:
     try:
         data = request.get_json()
 
+        # Need to add converting preferences string into tuple of (ingredient, calorie, diet)
         preferences = data.get('preferences')
 
 

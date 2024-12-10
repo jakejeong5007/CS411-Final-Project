@@ -52,39 +52,52 @@ check_db() {
 #
 ##########################################################
 logging_in() {
-  echo "Logging into user account"
-  response = $(curl -s -X POST "BASE_URL/login")
+  user_name=$1
+  user_password=$2
 
-  if echo "$response" | grep -q '"status": "success"'; then
-    echo "Login successful."
-  else
-    echo "Failed to login."
-    exit 1
-  fi
+  echo "Logging into user account with user name:$user_name"
+  curl -s -X POST "$BASE_URL/login" -H "Content-Type: application/json" \
+      -d "{\"user_name\":\"$user_name\", \"user_password\":\"$user_password\"}" | grep -q '"status": "success"'
+
+    if [ $? -eq 0 ]; then
+      echo "Login done successfully."
+    else
+      echo "Failed to login."
+      exit 1
+    fi
 }
 
 creating_account() {
-  echo "Creating a user account"
-  response = $(curl - s -X POST "BASE_URL/create_account")
+  user_name=$1
+  user_password=$2
 
-  if echo "$response" | grep -q '"status": "success"'; then
-    echo "Account created successfully."
-  else
-    echo "Failed to create account."
-    exit 1
-  fi
+  echo "Creating a new user account with user name:$user_name"
+  curl -s -X POST "$BASE_URL/create-account" -H "Content-Type: application/json" \
+      -d "{\"user_name\":\"$user_name\", \"user_password\":\"$user_password\"}" | grep -q '"status": "success"'
+
+    if [ $? -eq 0 ]; then
+      echo "Account created successfully."
+    else
+      echo "Failed to create a new account."
+      exit 1
+    fi
 }
 
 updating_password() {
-  echo "Updating password of account"
-  response = $(curl - s -X PATCH "BASE_URL/update_password")
+  user_name=$1
+  current_user_password=$2
+  new_user_password=$3
 
-  if echo "$response" | grep -q '"status": "success"'; then
-    echo "Password updated successfully."
-  else
-    echo "Failed to update password."
-    exit 1
-  fi
+  echo "Changing account password with user name:$user_name"
+  curl -s -X PATCH "$BASE_URL/update-password" -H "Content-Type: application/json" \
+      -d "{\"user_name\":\"$user_name\", \"current_user_password\":\"$current_user_password\", \"new_user_password\":\"$new_user_password\"}" | grep -q '"status": "success"'
+
+    if [ $? -eq 0 ]; then
+      echo "User password changed successfully."
+    else
+      echo "Failed to change user password."
+      exit 1
+    fi
 }
 ##########################################################
 #
@@ -93,33 +106,35 @@ updating_password() {
 ##########################################################
 
 search_for_recipes() {
-  echo "Searching for recipes"
-  response = $(curl -s -X GET "BASE_URL/search_recipes")
-  if echo "$response"|grep -q "status":"success"; then
-    echo "Recipes searched for successfully"
-    if [ "$ECHO_JSON" = true ]; then
-      echo "Recipes JSON:"
-      echo "$response" | jq .
+  ingredient=$1
+  diet=$2
+  calorie=$3
+
+  echo "Searching recipes with ingredient:$ingredient, diet:$diet, calories:$calorie"
+  curl -s -X GET "$BASE_URL/search" -H "Content-Type: application/json" \
+      -d "{\"ingredients\":\"$ingredient\", \"diet\":\"$diet\", \"calories\":\"$calorie\"}" | grep -q '"status": "success"'
+
+    if [ $? -eq 0 ]; then
+      echo "Search for recipes done successfully."
+    else
+      echo "Failed to search for recipes."
+      exit 1
     fi
-  else 
-    echo "Failed to search for recipes."
-    exit 1
-  fi
 }
 
 recommend_recipes() {
-  echo "Getting recipe recommendations"
-  response = $(curl -s -X GET "BASE_URL/recommend_recipes")
-  if echo "$response"|grep -q "status":"success"; then
-    echo "Recipes recommended successfully"
-    if [ "$ECHO_JSON" = true ]; then
-      echo "Recipes JSON:"
-      echo "$response" | jq .
+  cuisine=$1
+
+  echo "Getting recomendation of recipies with cuisine:$cuisine"
+  curl -s -X GET "$BASE_URL/recommend" -H "Content-Type: application/json" \
+      -d "{\"cuisine\":\"$cuisine\"}" | grep -q '"status": "success"'
+
+    if [ $? -eq 0 ]; then
+      echo "Getting recommendation for recipes done successfully."
+    else
+      echo "Failed to get recommendation for recipes."
+      exit 1
     fi
-  else
-    echo "Failed to recommend recipes."
-    exit 1
-  fi
 }
 
 trending_recipes() {
@@ -138,11 +153,13 @@ trending_recipes() {
 }
 
 save_recipes() {
+  recipe_id=$1
   echo "Saving recipes to user profile"
-  response = $(curl -s -X POST "BASE_URL/save_recipes")
+  curl -s -X GET "$BASE_URL/saveRecipe" -H "Content-Type: application/json" \
+      -d "{\"recipe_id\":\"$recipe_id\"}" | grep -q '"status": "success"'
 
-  if echo "$response" | grep -q '"status": "success"'; then
-    echo "Recipes saved successfully."
+  if [ $? -eq 0 ]; then
+    echo "Saving recipe by id done successfully."
   else
     echo "Failed to save recipes."
     exit 1
@@ -150,13 +167,16 @@ save_recipes() {
 }
 
 update_recipe_preferences() {
-  echo "Updating user recipe preferences"
-  response = $(curl -s -X PUT "BASE_URL/update_preferences")
+  preferences=$1
 
-  if echo "$response" | grep -q '"status": "success"'; then
-    echo "Preferences updated successfully."
+  echo "Updating user recipe preferences"
+  curl -s -X GET "$BASE_URL/saveRecipe" -H "Content-Type: application/json" \
+      -d "{\"preferences\":\"$preferences\"}" | grep -q '"status": "success"'
+
+  if [ $? -eq 0 ]; then
+    echo "Saving preferences done successfully."
   else
-    echo "Failed to update recipes."
+    echo "Failed to save preferences."
     exit 1
   fi
 }
