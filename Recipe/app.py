@@ -214,9 +214,6 @@ def recommend() -> Response:
 
         cuisine = request.args.get('cuisine')
 
-        if not user_id:
-            return make_response(jsonify({'error': 'User ID parameter is required'}), 400)
-
         app.logger.info("Fetching recommendations for, cuisine: %s", cuisine)
 
         # Fetch user preferences and recommend recipes

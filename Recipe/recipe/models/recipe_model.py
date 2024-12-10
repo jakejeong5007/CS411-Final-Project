@@ -23,7 +23,7 @@ class Recipe:
     ingredients: List[str]
     calories: int
      
-    def __init__(self, title: str, url: str, ingredients: List[str], calories: int, diet_labels: str):
+    def __init__(self, title: str, url: str, ingredients: List[str], calories: int):
         self.title = title
         self.ingredients = ingredients
         self.calories = calories
