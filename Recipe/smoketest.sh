@@ -73,6 +73,21 @@ search_for_recipes() {
   fi
 }
 
+recommend_recipes() {
+  echo "Getting recipe recommendations"
+  response = $(curl -s -X GET "BASE_URL/recommend_recipes")
+  if echo "$response"|grep -q "status":"success"; then
+    echo "Recipes recommended successfully"
+    if [ "$ECHO_JSON" = true ]; then
+      echo "Recipes JSON:"
+      echo "$response" | jq .
+    fi
+  else
+    echo "Failed to recommend recipes."
+    exit 1
+  fi
+}
+
 
 
 ##########################################################
