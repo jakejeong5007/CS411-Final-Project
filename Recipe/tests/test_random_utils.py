@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from recipe.utils.random_utils import get_random
 
 class TestRandomUtils(unittest.TestCase):
