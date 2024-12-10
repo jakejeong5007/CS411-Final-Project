@@ -14,7 +14,7 @@ app_key = "APP_KEY"
 base_url = "https://api.edamam.com/api/recipes/v2"
 
 
-def fetch_recipes_from_api(ingredients, diet=None, calories=None) -> List[Recipe]:
+def fetch_recipes_from_api(ingredients, diet=None, calories=None, cuisine=None) -> List[Recipe]:
     """
     Calls the Edamam API to search for recipes based on the provided parameters.
 
@@ -38,6 +38,8 @@ def fetch_recipes_from_api(ingredients, diet=None, calories=None) -> List[Recipe
         params["diet"] = diet
     if calories:
         params["calories"] = calories
+    if cuisine:
+        params["cuisineType"] = cuisine
 
     response = requests.get(base_url, params=params)
     response.raise_for_status()  # Raise an error for bad HTTP responses

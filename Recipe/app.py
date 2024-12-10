@@ -211,16 +211,16 @@ def recommend() -> Response:
         JSON response with recommended recipes or an error message.
     """
     try:
-        user_id = request.args.get('userId')
+
         cuisine = request.args.get('cuisine')
 
         if not user_id:
             return make_response(jsonify({'error': 'User ID parameter is required'}), 400)
 
-        app.logger.info("Fetching recommendations for userId: %s, cuisine: %s", user_id, cuisine)
+        app.logger.info("Fetching recommendations for, cuisine: %s", cuisine)
 
         # Fetch user preferences and recommend recipes
-        preferences = recipe_account_model.get_user_preferences(user_id)
+        preferences = recipe_account_model.get_user_preferences()
         if not preferences:
             return make_response(jsonify({'error': 'User preferences not found'}), 404)
 
@@ -269,15 +269,11 @@ def save() -> Response:
     try:
         data = request.get_json()
 
-        user_id = data.get('userId')
         recipe_id = data.get('recipeId')
 
-        if not user_id or recipe_id:
-            return make_response(jsonify({'error': 'Invalid input, all fields are required with valid values'}), 400)
-
         app.logger.info('Saving recipe: %s - %s', user_id, recipe_id)
-        recipe_model.save(userId=user_id, recipeId=recipe_id)
-        app.logger.info("Song saved to account: %s - %s", user_id, recipe_id)
+        recipe_model.save(recipeId=recipe_id)
+        app.logger.info("Recipe saved: %s", recipe_id)
         return make_response(jsonify({'status': 'success', 'receipe': recipe_id}), 201)
 
     except Exception as e:
@@ -297,16 +293,14 @@ def preferences() -> Response:
     try:
         data = request.get_json()
 
-        user_id = data.get('userId')
         preferences = data.get('preferences')
 
-        if not user_id or isinstance(preferences, dict):
-            return make_response(jsonify({'error': 'Invalid input, userId and preferences required'}), 400)
 
-            app.logger.info('Updating preferences for user: %s', user_id)
-            recipe_account_model.update_preferences(user_id=user_id, preferences=preferences)
 
-        app.logger.info("Preferences updated for user: %s", user_id)
+        app.logger.info('Updating preferences')
+        recipe_account_model.update_preferences(preferences=preferences)
+
+        app.logger.info("Preferences updated")
         return make_response(jsonify({'status': 'success', 'preferences': preferences}), 200)
 
     except Exception as e:

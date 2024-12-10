@@ -3,6 +3,7 @@ from typing import List
 import logging
 import os
 import sqlite3
+import json
 
 from recipe.utils.recipe_api_utils import fetch_recipes_from_api, fetch_trending_recipes
 
@@ -58,3 +59,36 @@ def get_trending_recipes():
     except Exception as e:
         print(f"Error fetching trending recipes: {e}")
         return []
+    
+def save_recipes(recipes: List[Recipe]) -> None:
+    """
+    Saves a list of Recipe objects into the recipes table.
+
+    Args:
+        recipes (List[Recipe]): A list of Recipe objects to save.
+
+    Raises:
+        ValueError: If any recipe is invalid.
+        sqlite3.Error: For any database errors.
+    """
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+
+            for recipe in recipes:
+                # Validate the recipe
+                if not isinstance(recipe, Recipe):
+                    raise ValueError("Invalid Recipe object in the list.")
+
+                # Insert the recipe into the database
+                cursor.execute("""
+                    INSERT INTO recipes (title, ingredients, calories)
+                    VALUES (?, ?, ?)
+                """, (recipe.title, json.dumps(recipe.ingredients), recipe.calories))
+
+            conn.commit()
+            logger.info("%d recipes saved successfully.", len(recipes))
+
+    except sqlite3.Error as e:
+        logger.error("Database error while saving recipes: %s", str(e))
+        raise sqlite3.Error(f"Database error: {str(e)}")
