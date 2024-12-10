@@ -2,6 +2,7 @@ from dotenv import load_dotenv
 from flask import Flask, jsonify, make_response, Response, request
 
 from recipe.models import recipe_account_model, recipe_model, account_management_model
+from recipe.models.recipe_account_model import RecipeAccountModel
 from recipe.utils.sql_utils import check_database_connection, check_table_exists
 
 # Load environment variables from .env file
@@ -9,7 +10,7 @@ load_dotenv()
 
 app = Flask(__name__)
 
-
+recipe_account_model = RecipeAccountModel()
 
 ####################################################
 #
@@ -315,10 +316,6 @@ def getPreferences() -> Response:
     """
     app.logger.info("Retrieving user preferences")
     try:
-        data = request.get_json()
-
-        preferences = data.get('preferences')
-        
         app.logger.info('Retrieving preferences')
         recipe_account_model.get_user_preferences()
 
@@ -328,3 +325,6 @@ def getPreferences() -> Response:
     except Exception as e:
         app.logger.error("Failed to update preferences: %s", str(e))
         return make_response(jsonify({'error': str(e)}), 500)
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5000)
