@@ -28,7 +28,7 @@ class Recipe:
         self.ingredients = ingredients
         self.calories = calories
 
-def serach_recipes(ingredients, diet=None, calories=None) -> List[Recipe]:
+def search_recipes(ingredients, diet=None, calories=None) -> List[Recipe]:
     """
     Searches for recipe that satisfies the three parameters.
     
