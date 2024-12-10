@@ -6,6 +6,8 @@ Recipe Finder is a web application designed to simplify the process of discoveri
 
 The application integrates with external APIs like the Spoonacular API or Edamam Recipe API to fetch comprehensive recipe data, including nutritional details, preparation steps, and ingredient lists. By combining a user-friendly interface with powerful search and recommendation features, Recipe Finder transforms the way users plan meals and explore new dishes.
 
+**Note: For the external API, you need to pay for it. Therefore, we have the code for the case you have the API key commented out. For now, the API call returns an dummy value of an empty list (Should return a list of recipies when having a API key)**
+
 Key Features:
 
 1\. **Ingredient-Based Search**: Users can input a list of available ingredients to find recipes that match, making it easy to use up ingredients in their kitchen.
