@@ -41,7 +41,9 @@ def search_recipes(ingredients, diet=None, calories=None) -> List[Recipe]:
         list: A list of recipes matching the search criteria.        
     """
     try:
-        recipes = fetch_recipes_from_api(ingredients, diet, calories)
+        # API call response hard coded
+        # recipes = fetch_recipes_from_api(ingredients, diet, calories)
+        recipes = []
         return recipes
     except Exception as e:
         logger.error(f'Fails during API call: {e}')
@@ -55,7 +57,8 @@ def get_trending_recipes():
         List[Recipe]: A list of trending Recipe objects.
     """
     try:
-        return fetch_trending_recipes()
+        # return fetch_trending_recipes()
+        return []
     except Exception as e:
         print(f"Error fetching trending recipes: {e}")
         return []

@@ -158,7 +158,7 @@ def update_password() -> Response:
         app.logger.info('Password updated')
         return make_response(jsonify({'status': 'success', 'user_name': user_name}), 201)
     except Exception as e:
-        app.logger.error('Failed to update password')
+        app.logger.error(f'Failed to update password {e}')
         return make_response(jsonify({'error': str(e)}), 500)
 
 
@@ -182,17 +182,22 @@ def search() -> Response:
         JSON response with search results or an error message.
     """
     try:
-        ingredients = request.args.get('ingredients')
-        diet = request.args.get('diet')
-        calories = request.args.get('calories')
+        data = request.get_json()
+        
+        ingredient = data.get('ingredients')
+        diet = data.get('diet')
+        calories = data.get('calories')
 
-        if not ingredients:
+        app.logger.info("Checking if inputs are valid:%s", ingredient)
+        if not ingredient:
             return make_response(jsonify({'error': 'Ingredients parameter is required'}), 400)
 
-        app.logger.info("Searching recipes with ingredients: %s, diet: %s, calories: %s", ingredients, diet, calories)
+        app.logger.info("Searching recipes with ingredients: %s, diet: %s, calories: %s", ingredient, diet, calories)
 
         # Fetch recipes using the utility function
-        recipes = recipe_model.search_recipes(ingredients=ingredients, diet=diet, calories=calories)
+        recipes = recipe_model.search_recipes(ingredients=ingredient, diet=diet, calories=calories)
+        recipe_model.save_recipes(recipes)
+        app.logger.info("Searching complete")
         return make_response(jsonify({'status': 'success', 'recipes': recipes}), 200)
     except Exception as e:
         app.logger.error("Error searching for recipes: %s", str(e))
@@ -205,14 +210,13 @@ def recommend() -> Response:
     Route to get personalized recipe recommendations.
 
     Query Parameters:
-        - userId (str): User ID (required).
         - cuisine (str, optional): Preferred cuisine type.
 
     Returns:
         JSON response with recommended recipes or an error message.
     """
     try:
-
+        app.logger.info("start")
         cuisine = request.args.get('cuisine')
 
         app.logger.info("Fetching recommendations for, cuisine: %s", cuisine)
@@ -222,7 +226,7 @@ def recommend() -> Response:
         if not preferences:
             return make_response(jsonify({'error': 'User preferences not found'}), 404)
 
-        recipes = recipe_model.recommend_recipes(preferences, cuisine=cuisine)
+        recipes = recipe_account_model.recommend_recipes(preferences, cuisine=cuisine)
         return make_response(jsonify({'status': 'success', 'recipes': recipes}), 200)
     except Exception as e:
         app.logger.error("Error recommending recipes: %s", str(e))
@@ -254,7 +258,6 @@ def save() -> Response:
     Saves recipes to a user's profile
 
     Expected JSON Input:
-        userId (str): The user's ID
         recipeId (str): The recipe's ID
 
     Returns:
@@ -270,7 +273,11 @@ def save() -> Response:
         recipe_id = data.get('recipeId')
 
         app.logger.info('Saving recipe: %s', recipe_id)
-        recipe_model.save(recipeId=recipe_id)
+        """
+        The code below should save a recipe with id recipe_id to the recipe_account_model. However, since we are returning a dummy empty list for the api call,
+        there will not be any recpie that is saved in the recipes table. 
+        """
+        # recipe_account_model.save(recipe_id=int(recipe_id))
         app.logger.info("Recipe saved: %s", recipe_id)
         return make_response(jsonify({'status': 'success', 'receipe': recipe_id}), 201)
 
@@ -283,20 +290,25 @@ def save() -> Response:
 def preferences() -> Response:
     """
     Updates the users recipe preferences
+    
+    Expected JSON Input:
+        ingredient (str)
+        calorie (int)
+        diet (str)
 
     Returns:
         JSON response with user recipe preferences
     """
-    app.logger.info("Updating user preferences")
     try:
+        app.logger.info("start")
         data = request.get_json()
+        
+        ingredient = data.get('ingredients')
+        diet = data.get('diet')
+        calories = data.get('calories')
+        preferences=(str(ingredient), int(calories), str(diet))
 
-        # Need to add converting preferences string into tuple of (ingredient, calorie, diet)
-        preferences = data.get('preferences')
-
-
-
-        app.logger.info('Updating preferences')
+        app.logger.info('Updating preferences ingredient: %s, diet: %s, calories: %s', type(ingredient), type(diet), type(calories))
         recipe_account_model.update_preferences(preferences=preferences)
 
         app.logger.info("Preferences updated")
@@ -317,7 +329,7 @@ def getPreferences() -> Response:
     app.logger.info("Retrieving user preferences")
     try:
         app.logger.info('Retrieving preferences')
-        recipe_account_model.get_user_preferences()
+        preferences = recipe_account_model.get_user_preferences()
 
         app.logger.info("Preferences retrieved")
         return make_response(jsonify({'status': 'success', 'preferences': preferences}), 200)

@@ -72,7 +72,7 @@ def create_account(user_name: str, user_password: str) -> None:
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                           INSERT INTO users (username, salt, password)
+                           INSERT INTO users (username, salt, hashed_password)
                            VALUES (?, ?, ?)
                            """, (user_name, salt, hash_password(user_password)))
             conn.commit()
@@ -109,15 +109,15 @@ def change_password(user_name: str, current_user_password: str, changed_user_pas
                     logger.info("Successful login with user name: %s", user_name)
                     cursor.execute("UPDATE users SET hashed_password = ? WHERE username = ?;", 
                                 (hash_password(changed_user_password), user_name))
+                    conn.commit()
                 else:
                     logger.info("Password does not match with user name: %s", user_name)
-                cursor.commit()
             except TypeError:
                 logger.info("User name with %s not found", user_name)
                 raise ValueError(f"User name with {user_name} not found")
             
     except sqlite3.Error as e:
-        logger.error("Database error while updating password: %s", user_name)
+        logger.error(f"Database error {e}while updating password: {user_name}")
         raise e    
     
 def hash_password(user_password: str) -> str:

@@ -14,4 +14,5 @@ else
 fi
 
 # Start the Python application
+echo "running app.py"
 exec python app.py

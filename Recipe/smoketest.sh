@@ -138,14 +138,10 @@ recommend_recipes() {
 }
 
 trending_recipes() {
-  echo "Getting trending recipes"
-  response = $(curl -s -X GET "BASE_URL/get_trending_recipes")
-  if echo "$response"|grep -q "status":"success"; then
-    echo "Trending recipes retrieved successfully"
-    if [ "$ECHO_JSON" = true ]; then
-      echo "Recipes JSON:"
-      echo "$response" | jq .
-    fi
+  echo "Getting trending recipes..."
+  curl -s -X GET "$BASE_URL/trending" | grep -q '"status": "success"'
+  if [ $? -eq 0 ]; then
+    echo "Trending recipes retrieved successfully."
   else
     echo "Failed to retrieve trending recipes."
     exit 1
@@ -155,8 +151,8 @@ trending_recipes() {
 save_recipes() {
   recipe_id=$1
   echo "Saving recipes to user profile"
-  curl -s -X GET "$BASE_URL/saveRecipe" -H "Content-Type: application/json" \
-      -d "{\"recipe_id\":\"$recipe_id\"}" | grep -q '"status": "success"'
+  curl -s -X POST "$BASE_URL/saveRecipe" -H "Content-Type: application/json" \
+      -d "{\"recipeId\":\"$recipe_id\"}" | grep -q '"status": "success"'
 
   if [ $? -eq 0 ]; then
     echo "Saving recipe by id done successfully."
@@ -167,11 +163,13 @@ save_recipes() {
 }
 
 update_recipe_preferences() {
-  preferences=$1
+  ingredient=$1
+  diet=$2
+  calorie=$3
 
   echo "Updating user recipe preferences"
-  curl -s -X GET "$BASE_URL/saveRecipe" -H "Content-Type: application/json" \
-      -d "{\"preferences\":\"$preferences\"}" | grep -q '"status": "success"'
+  curl -s -X PUT "$BASE_URL/preferences" -H "Content-Type: application/json" \
+      -d "{\"ingredients\":\"$ingredient\", \"diet\":\"$diet\", \"calories\":\"$calorie\"}" | grep -q '"status": "success"'
 
   if [ $? -eq 0 ]; then
     echo "Saving preferences done successfully."
@@ -182,10 +180,9 @@ update_recipe_preferences() {
 }
 
 get_recipe_preferences() {
-  echo "Retrieving user recipe preferences"
-  response = $(curl -s -X PUT "BASE_URL/get_preferences")
-
-  if echo "$response" | grep -q '"status": "success"'; then
+  echo "Retrieving user recipe preferences..."
+  curl -s -X GET "$BASE_URL/get-preferences" | grep -q '"status": "success"'
+  if [ $? -eq 0 ]; then
     echo "Preferences retrieved successfully."
   else
     echo "Failed to retrieve recipes."
@@ -193,6 +190,7 @@ get_recipe_preferences() {
   fi
 }
 
+echo "Smoketest start"
 
 # Health checks
 check_health
@@ -206,10 +204,10 @@ logging_in "test_user" "new_password123"
 
 # Recipe management
 search_for_recipes "tomato" "vegetarian" "200"
+update_recipe_preferences "tomato" "vegetarian" "200"
 recommend_recipes "Italian"
 trending_recipes
-save_recipes "12345"
-update_recipe_preferences '{"cuisine":"Asian","diet":"Vegan"}'
+save_recipes "1"
 get_recipe_preferences
 
 echo "Smoketest completed successfully!"
