@@ -73,6 +73,72 @@ search_for_recipes() {
   fi
 }
 
+recommend_recipes() {
+  echo "Getting recipe recommendations"
+  response = $(curl -s -X GET "BASE_URL/recommend_recipes")
+  if echo "$response"|grep -q "status":"success"; then
+    echo "Recipes recommended successfully"
+    if [ "$ECHO_JSON" = true ]; then
+      echo "Recipes JSON:"
+      echo "$response" | jq .
+    fi
+  else
+    echo "Failed to recommend recipes."
+    exit 1
+  fi
+}
+
+trending_recipes() {
+  echo "Getting trending recipes"
+  response = $(curl -s -X GET "BASE_URL/get_trending_recipes")
+  if echo "$response"|grep -q "status":"success"; then
+    echo "Trending recipes retrieved successfully"
+    if [ "$ECHO_JSON" = true ]; then
+      echo "Recipes JSON:"
+      echo "$response" | jq .
+    fi
+  else
+    echo "Failed to retrieve trending recipes."
+    exit 1
+  fi
+}
+
+save_recipes() {
+  echo "Saving recipes to user profile"
+  response = $(curl -s -X POST "BASE_URL/save_recipes")
+
+  if echo "$response" | grep -q '"status": "success"'; then
+    echo "Recipes saved successfully."
+  else
+    echo "Failed to save recipes."
+    exit 1
+  fi
+}
+
+update_recipe_preferences() {
+  echo "Updating user recipe preferences"
+  response = $(curl -s -X PUT "BASE_URL/update_preferences")
+
+  if echo "$response" | grep -q '"status": "success"'; then
+    echo "Preferences updated successfully."
+  else
+    echo "Failed to update recipes."
+    exit 1
+  fi
+}
+
+get_recipe_preferences() {
+  echo "Retrieving user recipe preferences"
+  response = $(curl -s -X PUT "BASE_URL/get_preferences")
+
+  if echo "$response" | grep -q '"status": "success"'; then
+    echo "Preferences retrieved successfully."
+  else
+    echo "Failed to retrieve recipes."
+    exit 1
+  fi
+}
+
 
 
 ##########################################################
