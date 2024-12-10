@@ -51,7 +51,41 @@ check_db() {
 # Password Management
 #
 ##########################################################
+logging_in() {
+  echo "Logging into user account"
+  response = $(curl -s -X POST "BASE_URL/login")
 
+  if echo "$response" | grep -q '"status": "success"'; then
+    echo "Login successful."
+  else
+    echo "Failed to login."
+    exit 1
+  fi
+}
+
+creating_account() {
+  echo "Creating a user account"
+  response = $(curl - s -X POST "BASE_URL/create_account")
+
+  if echo "$response" | grep -q '"status": "success"'; then
+    echo "Account created successfully."
+  else
+    echo "Failed to create account."
+    exit 1
+  fi
+}
+
+updating_password() {
+  echo "Updating password of account"
+  response = $(curl - s -X PATCH "BASE_URL/update_password")
+
+  if echo "$response" | grep -q '"status": "success"'; then
+    echo "Password updated successfully."
+  else
+    echo "Failed to update password."
+    exit 1
+  fi
+}
 ##########################################################
 #
 # Recipe Management
