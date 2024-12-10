@@ -268,7 +268,7 @@ def save() -> Response:
 
         recipe_id = data.get('recipeId')
 
-        app.logger.info('Saving recipe: %s - %s', user_id, recipe_id)
+        app.logger.info('Saving recipe: %s', recipe_id)
         recipe_model.save(recipeId=recipe_id)
         app.logger.info("Recipe saved: %s", recipe_id)
         return make_response(jsonify({'status': 'success', 'receipe': recipe_id}), 201)
@@ -278,7 +278,7 @@ def save() -> Response:
         return make_response(jsonify({'error': str(e)}), 500)
 
 
-@app.route('/api/', methods=['PUT'])
+@app.route('/api/preferences', methods=['PUT'])
 def preferences() -> Response:
     """
     Updates the users recipe preferences
@@ -304,7 +304,7 @@ def preferences() -> Response:
         app.logger.error("Failed to update preferences: %s", str(e))
         return make_response(jsonify({'error': str(e)}), 500)
 
-
+@app.route('/api/get-preferences', methods=['GET'])
 def getPreferences() -> Response:
     """
     Gets the users recipe preferences
@@ -316,16 +316,12 @@ def getPreferences() -> Response:
     try:
         data = request.get_json()
 
-        user_id = data.get('userId')
         preferences = data.get('preferences')
+        
+        app.logger.info('Retrieving preferences')
+        recipe_account_model.get_user_preferences()
 
-        if not user_id or isinstance(preferences, dict):
-            return make_response(jsonify({'error': 'Invalid input, userId and preferences required'}), 400)
-
-        app.logger.info('Retrieving preferences for user: %s', user_id)
-        recipe_account_model.get_preferences(user_id=user_id, preferences=preferences)
-
-        app.logger.info("Preferences retrieved for user: %s", user_id)
+        app.logger.info("Preferences retrieved")
         return make_response(jsonify({'status': 'success', 'preferences': preferences}), 200)
 
     except Exception as e:
