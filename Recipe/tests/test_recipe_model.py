@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from recipe.models.recipe_model import search_recipes, save_recipes, get_trending_recipes
 
 class TestRecipeModel(unittest.TestCase):
