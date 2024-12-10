@@ -52,6 +52,27 @@ check_db() {
 #
 ##########################################################
 
+##########################################################
+#
+# Recipe Management
+#
+##########################################################
+
+search_for_recipes() {
+  echo "Searching for recipes"
+  response = $(curl -s -X GET "BASE_URL/search_recipes")
+  if echo "$response"|grep -q "status":"success"; then
+    echo "Recipes searched for successfully"
+    if [ "$ECHO_JSON" = true ]; then
+      echo "Recipes JSON:"
+      echo "$response" | jq .
+    fi
+  else 
+    echo "Failed to search for recipes."
+    exit 1
+  fi
+}
+
 
 
 ##########################################################
