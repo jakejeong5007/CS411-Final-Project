@@ -132,7 +132,7 @@ def hash_password(user_password: str) -> str:
     """
     
     # Hash the password combined with the salt
-    hashed_password = hashlib.sha256((salt + user_password).encode()).hexdigest()
+    hashed_password = hashlib.sha256(salt + user_password.encode()).hexdigest()  # Fix
 
     # Combine salt and hashed password, separated by a special character
-    return f"{salt}${hashed_password}"
+    return f"{salt.hex()}${hashed_password}"
